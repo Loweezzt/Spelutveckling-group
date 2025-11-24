@@ -98,94 +98,35 @@ Detta ger spelaren ett enkelt ansikte med ögon och mun, vilket gör den mer lev
 
 Hur kan vi göra spelarens mun mer uttrycksfull? Experimentera med ritmetoderna för att göra munnen glad eller ledsen. Testa att styra det med inputs, eller varför inte göra spelaren ledsen när den inte rör sig?
 
-### Rektanglar och kollision
+## Uppgifter
 
-Nu kan du testa att rita flera rektanglar på canvasen och låta spelaren röra sig runt bland dem. I `GameObject`-klassen finns det redan en metod för att kolla kollision mellan två objekt. Använd denna för att göra så att spelaren inte kan gå igenom rektanglarna. I det här fallet så är det rekommenderat att kontrollera kollision i `Game`-klassens `update`-metod, där du kan iterera över alla `gameObjects` och kolla om spelaren kolliderar med någon av dem.
+### Glad och ledsen mun
 
-**Viktigt:** Spelaren ska lagras separat från `gameObjects`-arrayen i `Game`-klassen. Detta gör det enklare att hantera spelaren separat från andra objekt:
+Hur kan vi göra spelarens mun mer uttrycksfull? Experimentera med ritmetoderna för att göra munnen glad eller ledsen. Testa att styra det med inputs, eller varför inte göra spelaren ledsen när den inte rör sig?
 
-```javascript
-// I Game.js constructor
-this.player = new Player(this, 50, 50, 50, 50, 'green')
+### Animationer
 
-this.gameObjects = [
-    new Rectangle(this, 200, 150, 50, 50, 'red')
-]
-```
+Kan du göra spelaren mer levande genom att lägga till animationer? Till exempel att ögonen blinkar, munnen rör sig, eller att spelaren "hoppar" när den rör sig snabbt?
 
-Sedan i `update`-metoden kollar vi kollision mellan spelaren och alla andra objekt:
+### Accelererande rörelse
 
-```javascript
-// Game.js update()
-this.player.update(deltaTime)
-this.gameObjects.forEach(obj => obj.update(deltaTime))
-
-this.gameObjects.forEach(obj => {
-    if (this.player.intersects(obj)) {
-        // Hantera kollision, tex. rita en sur mun och stoppa rörelsen
-    }
-})
-```
-
-Vi låter alltså `Game`-klassen hantera kollisionsdetekteringen, vilket är en bra designprincip eftersom `Game` har överblick över alla objekt i spelet.
-
-#### Stoppa spelaren vid kollision
-
-När spelaren väl kolliderar med ett objekt så behöver vi hantera det, till exempel genom att stoppa spelarens rörelse i den riktningen. Detta kan göras genom att justera spelarens position baserat på vilken sida kollisionsdetekteringen inträffade på. Vi använder `directionX` och `directionY` för att bestämma åt vilket håll spelaren rör sig:
-
-```javascript
-// Game.js update()
-this.gameObjects.forEach(obj => {
-    if (this.player.intersects(obj)) {
-        // Hantera kollision baserat på riktning
-        if (this.player.directionX > 0) { // rör sig åt höger
-            this.player.x = obj.x - this.player.width
-        } else if (this.player.directionX < 0) { // rör sig åt vänster
-            this.player.x = obj.x + obj.width
-        }
-        if (this.player.directionY > 0) { // rör sig neråt
-            this.player.y = obj.y - this.player.height
-        } else if (this.player.directionY < 0) { // rör sig uppåt
-            this.player.y = obj.y + obj.height
-        }
-    }
-})
-```
-
-Och i `draw`-metoden ritar vi spelaren separat:
-
-```javascript
-// Game.js draw()
-draw(ctx) {
-    this.gameObjects.forEach(obj => obj.draw(ctx))
-    this.player.draw(ctx)
-}
-```
-
-Testa detta och se hur det fungerar! Justera gärna koden för att få det att kännas rätt i spelet.
-
-### En labyrint
-
-Skapa en enkel labyrint med rektanglar som spelaren måste navigera genom. Använd kollisiondetekteringen för att hindra spelaren från att gå igenom väggarna i labyrinten. Du kan designa labyrinten genom att placera flera rektanglar på olika positioner i spelet. Testa att lägga till en start- och målpunkt för att göra det mer utmanande!
-
-För att skapa ett mål så kan du ärva från `GameObject` och skapa en `Goal`-klass som ritar ut målet på canvasen. När spelaren når målet (kolla den kollisionen) kan du visa ett meddelande.
+Istället för att spelaren direkt får full hastighet när en tangent trycks ned, försök implementera mjuk acceleration och inbromsning. Detta ger en mer realistisk känsla.
 
 ## Sammanfattning
 
 I den här filen har vi skapat en `Player`-klass som hanterar spelarens rörelse och rendering. Vi har använt `InputHandler` för att läsa av tangentbordsinput och uppdaterat spelarens position baserat på detta.
 
-Vi har även testat att jobba med kollisioner mellan spelaren och rektanglar, samt gett spelaren ett enkelt ansikte för att göra den mer karaktärsfull. Du har nu en grund för att skapa ett spel där spelaren kan röra sig runt på canvasen.
+Vi har även gett spelaren ett enkelt ansikte med ögon som tittar i rörelseriktningen för att göra den mer karaktärsfull. Du har nu en grund för att skapa ett spel där spelaren kan röra sig runt på canvasen.
 
 ### Testfrågor
 
-1. Varför lagras spelaren separat från gameObjects-arrayen i Game-klassen?
-2. Varför hanterar vi X- och Y-rörelsen i separata if-satser istället för att använda else if?
-3. Hur används directionX och directionY för att få ögonen att "titta" åt rätt håll?
-4. Varför är det Game-klassen som ansvarar för kollisionsdetektering och inte Player-klassen?
-5. När en kollision upptäcks och spelaren rör sig åt höger (directionX > 0), hur stoppar vi spelaren?
-6. Hur skulle du stoppa spelaren från att gå utanför canvasens vänstra kant?
-7. Varför ritas spelaren efter alla andra objekt i draw()-metoden?
-8. Vilka tre Canvas-metoder används för att rita spelarens mun som ett streck?
+1. Varför hanterar vi X- och Y-rörelsen i separata if-satser istället för att använda `else if`?
+2. Hur används `directionX` och `directionY` för att få ögonen att "titta" åt rätt håll?
+3. Varför multiplicerar vi position med `deltaTime` i update-metoden?
+4. Hur skulle du stoppa spelaren från att gå utanför canvasens vänstra kant?
+5. Vilka Canvas-metoder används för att rita spelarens mun som ett streck?
 
 ## Nästa steg
+
+För att lära dig om kollisionsdetektering och hur spelaren kan interagera med andra objekt, byt till `collision` branchen och se [collision.md](collision.md).
 
