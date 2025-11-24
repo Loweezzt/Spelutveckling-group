@@ -44,28 +44,19 @@ I uppdateringsmetoden så händer det en hel del. Vi kollar vilka tangenter som 
             this.directionY = 0
         }
 
-        if (this.game.input.isKeyPressed('ArrowLeft')) {
-            this.velocityX = -this.moveSpeed
-            this.directionX = -1
-        } else if (this.game.input.isKeyPressed('ArrowRight')) {
-            this.velocityX = this.moveSpeed
-            this.directionX = 1
-        } else {
-            this.velocityX = 0
-            this.directionX = 0
-        }
-        
+        // ... samma för vänster och höger
+
         // Uppdatera position baserat på hastighet
         this.x += this.velocityX * deltaTime
         this.y += this.velocityY * deltaTime
     }
 ```
 
-Som du ser är hanteringen av input och rörelsen ganska likadan. Vi kollar om en viss tangent är nedtryckt, och om den är det så sätter vi hastigheten i den riktningen. Om ingen tangent är nedtryckt så sätter vi hastigheten till 0. Fundera här varför vi hanterar rörelsen i två separata if-satser istället för att använda `else if` för både X- och Y-rörelsen.
+Som du ser är hanteringen av input och rörelsen ganska likadan. Vi kollar om en viss tangent är nedtryckt, och om den är det så sätter vi hastigheten i den riktningen. Om ingen tangent är nedtryckt så sätter vi hastigheten till 0.
+
+Fundera här varför vi hanterar rörelsen i två separata if-satser istället för att använda `else if` för både X- och Y-rörelsen.
 
 Slutligen uppdaterar vi spelarens position baserat på hastigheten och `deltaTime`. Det är för att göra rörelsen framerate-oberoende.
-
-Här skulle vi också kunna göra så att spelaren accelerar och bromsar in mjukt, något som ger en väldigt annorlunda känsla jämfört med den direkta rörelsen vi har nu.
 
 ### Stoppa spelaren från att gå utanför canvas
 
@@ -83,41 +74,7 @@ if (this.y + this.height > this.game.height) this.y = this.game.height - this.he
 
 I draw så ritar vi ut spelaren som en rektangel. Detta sker likadant som i `Rectangle`-klassen vi skapade tidigare. Men här så lägger vi även till ögon som "tittar" i den riktning spelaren rör sig. Detta för att ge spelaren karaktär.
 
-```javascript
-    draw(ctx) {
-        // Rita spelaren som en rektangel
-        ctx.fillStyle = this.color
-        ctx.fillRect(this.x, this.y, this.width, this.height)
-
-        // Rita ögon
-        ctx.fillStyle = 'white'
-        ctx.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.2, this.width * 0.2, this.height * 0.2)
-        ctx.fillRect(this.x + this.width * 0.6, this.y + this.height * 0.2, this.width * 0.2, this.height * 0.2)
-        
-        // Rita pupiller
-        ctx.fillStyle = 'black'
-        ctx.fillRect(
-            this.x + this.width * 0.25 + this.directionX * this.width * 0.05, 
-            this.y + this.height * 0.25 + this.directionY * this.width * 0.05, 
-            this.width * 0.1, 
-            this.height * 0.1
-        )
-        ctx.fillRect(
-            this.x + this.width * 0.65 + this.directionX * this.width * 0.05, 
-            this.y + this.height * 0.25 + this.directionY * this.width * 0.05, 
-            this.width * 0.1, 
-            this.height * 0.1
-        )
-        
-        // rita mun som ett streck
-        ctx.strokeStyle = 'black'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.moveTo(this.x + this.width * 0.3, this.y + this.height * 0.65)
-        ctx.lineTo(this.x + this.width * 0.7, this.y + this.height * 0.65)
-        ctx.stroke()
-    }
-```
+För att flytta på ögonen så använder vi `directionX` och `directionY` som vi satte i `update`-metoden. Vi kan sedan påverka var vi ritar ut ögonen baserat på dessa värden.
 
 ### Rita mun
 
@@ -133,13 +90,13 @@ I slutet av `draw`-metoden så ritar vi även en mun som ett streck. Detta gör 
         ctx.stroke()
 ```
 
-Detta ger spelaren ett enkelt ansikte med ögon och mun, vilket gör den mer levande och karaktärsfull. Men hur skulle vi kunna göra munnen mer uttrycksfull?
-
-#### Glad och ledsen mun
-
-Exprimentera med ritmetoderna för att göra munnen glad eller ledsen. Testa att styra det med inputs, eller varför inte göra spelaren ledsen när den inte rör sig?
+Detta ger spelaren ett enkelt ansikte med ögon och mun, vilket gör den mer levande och karaktärsfull.
 
 ## Uppgifter
+
+### Glad och ledsen mun
+
+Hur kan vi göra spelarens mun mer uttrycksfull? Experimentera med ritmetoderna för att göra munnen glad eller ledsen. Testa att styra det med inputs, eller varför inte göra spelaren ledsen när den inte rör sig?
 
 ### Rektanglar och kollision
 
@@ -207,9 +164,28 @@ draw(ctx) {
 
 Testa detta och se hur det fungerar! Justera gärna koden för att få det att kännas rätt i spelet.
 
+### En labyrint
+
+Skapa en enkel labyrint med rektanglar som spelaren måste navigera genom. Använd kollisiondetekteringen för att hindra spelaren från att gå igenom väggarna i labyrinten. Du kan designa labyrinten genom att placera flera rektanglar på olika positioner i spelet. Testa att lägga till en start- och målpunkt för att göra det mer utmanande!
+
+För att skapa ett mål så kan du ärva från `GameObject` och skapa en `Goal`-klass som ritar ut målet på canvasen. När spelaren når målet (kolla den kollisionen) kan du visa ett meddelande.
+
 ## Sammanfattning
 
 I den här filen har vi skapat en `Player`-klass som hanterar spelarens rörelse och rendering. Vi har använt `InputHandler` för att läsa av tangentbordsinput och uppdaterat spelarens position baserat på detta.
 
-Du har nu en grund för att skapa ett spel där spelaren kan röra sig runt på canvasen.
+Vi har även testat att jobba med kollisioner mellan spelaren och rektanglar, samt gett spelaren ett enkelt ansikte för att göra den mer karaktärsfull. Du har nu en grund för att skapa ett spel där spelaren kan röra sig runt på canvasen.
+
+### Testfrågor
+
+1. Varför lagras spelaren separat från gameObjects-arrayen i Game-klassen?
+2. Varför hanterar vi X- och Y-rörelsen i separata if-satser istället för att använda else if?
+3. Hur används directionX och directionY för att få ögonen att "titta" åt rätt håll?
+4. Varför är det Game-klassen som ansvarar för kollisionsdetektering och inte Player-klassen?
+5. När en kollision upptäcks och spelaren rör sig åt höger (directionX > 0), hur stoppar vi spelaren?
+6. Hur skulle du stoppa spelaren från att gå utanför canvasens vänstra kant?
+7. Varför ritas spelaren efter alla andra objekt i draw()-metoden?
+8. Vilka tre Canvas-metoder används för att rita spelarens mun som ett streck?
+
+## Nästa steg
 
