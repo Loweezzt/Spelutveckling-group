@@ -296,3 +296,9 @@ Det är funktioner som detta som faktiskt börjar skapa en gameloop där spelare
 9. Hur kan du justera hoppkraften för att göra spelet mer utmanande eller lättare? Vilka värden skulle du ändra och varför?
 
 ## Nästa steg
+
+Byt branch till `04-collectibles` och fortsätt till nästa del i guiden! Då tittar vi på hur vi kan lägga till samlingsobjekt i spelet.
+
+```bash
+git checkout 04-collectibles
+```
