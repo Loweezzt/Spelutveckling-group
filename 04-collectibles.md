@@ -1,4 +1,4 @@
-# Steg 4 - Collectibles - Mynt och Score system
+# Steg 4 - Samla - Mynt och Score system
 
 Vi lägger till samlarbara objekt (mynt) och ett score-system med UI. Detta ger spelet en gameplay-loop där spelaren har ett mål: samla så många mynt som möjligt.
 
@@ -291,3 +291,11 @@ Vi tittar senda på hur vi kan hålla reda på spelets tillstånd (score, antal 
 ## Nästa steg
 
 I nästa steg kan du utforska att lägga till fiender som rör sig runt i spelvärlden och kan skada spelaren vid kollision. Detta kommer att introducera mer komplexa interaktioner och ytterligare game state-hantering, såsom spelarens hälsa och liv.
+
+Byt till `05-enemies` branchen för att fortsätta.
+
+```bash
+git checkout 05-enemies
+```
+
+Öppna sedan filen [Steg 5 - Fiender](05-enemies.md) för att fortsätta!

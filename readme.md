@@ -145,4 +145,10 @@ Denna tutorial är uppdelad i steg som följer en logisk progression. Varje steg
 
 Varje steg har sin egen git-branch (t.ex. `01-player`, `02-collision`, etc.) där koden för det steget finns implementerad.
 
-**Börja här:** [Steg 1 - Player](01-player.md)
+När du har jobbat klart med materialet i det här steget, byt till nästa branch för att fortsätta till nästa del i guiden.
+
+```bash
+git checkout 01-player
+```
+
+Öppna sedan filen [Steg 1 - Player](01-player.md) för att fortsätta!

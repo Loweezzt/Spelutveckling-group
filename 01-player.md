@@ -144,5 +144,10 @@ Vi har även gett spelaren ett enkelt ansikte med ögon som tittar i rörelserik
 
 ## Nästa steg
 
-För att lära dig om kollisionsdetektering och hur spelaren kan interagera med andra objekt, byt till `collision` branchen och se [collision.md](02-collision.md).
+För att lära dig om kollisionsdetektering och hur spelaren kan interagera med andra objekt, byt till `02-collision` branchen.
 
+```bash
+git checkout 02-collision
+```
+
+Öppna sedan [Steg 2 - Collision](02-collision.md).

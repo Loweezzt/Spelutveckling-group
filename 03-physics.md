@@ -305,3 +305,11 @@ Det är funktioner som detta som faktiskt börjar skapa en gameloop där spelare
 9. Hur kan du justera hoppkraften för att göra spelet mer utmanande eller lättare? Vilka värden skulle du ändra och varför?
 
 ## Nästa steg
+
+I nästa steg ska vi titta på hur vi kan skapa en game-loop som låter användaren plocka upp objekt och samla poäng. Byt till `04-collectibles` branchen för att fortsätta.
+
+```bash
+git checkout 04-collectibles
+```
+
+Öppna sedan filen [Steg 4 - Samla](04-collectibles.md).
