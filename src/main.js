@@ -15,15 +15,28 @@ const setupGame = (canvas) => {
     let gameLoop
 
     const runGame = (timeStamp) => {
+        // Nollställ lastTime vid restart för att undvika jättestort deltaTime
+        if (game.needsTimeReset) {
+            lastTime = timeStamp
+            game.needsTimeReset = false
+        }
+        
         // Räkna ut tid sedan förra frame
+        // Förhindra för stora deltaTime värden (t.ex. första framen)
+        if (lastTime === 0) {
+            lastTime = timeStamp
+        }
         const deltaTime = timeStamp - lastTime
         lastTime = timeStamp
+        
+        // Säkerhets-cap för deltaTime (max 100ms)
+        const cappedDeltaTime = Math.min(deltaTime, 100)
         
         // Rensa canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         
         // Uppdatera och rita
-        game.update(deltaTime)
+        game.update(cappedDeltaTime)
         game.draw(ctx)
         
         // Kör nästa frame

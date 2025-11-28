@@ -200,6 +200,97 @@ rlden (som "frozen" bakgrund)
 - Kontext för varför de dog/vann
 - Mer visuellt tilltalande än svart skärm
 
+## Viktig buggfix - deltaTime initialization
+
+**VIKTIGT:** Det finns en kritisk bugg i spelloopen som kan få spelaren att falla igenom världen!
+
+### Problemet
+
+Vid första framen (och när spelet startar om) kan `deltaTime` bli **jättestort**:
+- `lastTime` börjar på 0
+- `timeStamp` är tiden sedan sidan laddades (kan vara flera tusen millisekunder)
+- Detta ger `deltaTime = timeStamp - 0` = enormt värde!
+- Spelaren faller 43000+ pixels och hamnar långt under världen
+
+### Lösningen - Tre delar
+
+**1. Initiera lastTime korrekt (main.js):**
+```javascript
+const runGame = (timeStamp) => {
+    // Förhindra för stora deltaTime värden (t.ex. första framen)
+    if (lastTime === 0) {
+        lastTime = timeStamp
+    }
+    const deltaTime = timeStamp - lastTime
+    lastTime = timeStamp
+    
+    // ... rest av koden
+}
+```
+
+**2. Cap deltaTime till max 100ms (main.js):**
+```javascript
+const runGame = (timeStamp) => {
+    // ... lastTime check från ovan
+    
+    // Säkerhets-cap för deltaTime (max 100ms)
+    const cappedDeltaTime = Math.min(deltaTime, 100)
+    
+    // Rensa canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // Uppdatera och rita med cappedDeltaTime
+    game.update(cappedDeltaTime)
+    game.draw(ctx)
+    
+    // ... rest av koden
+}
+```
+
+**3. Nollställ vid restart (Game.js + main.js):**
+
+I **Game.js restart():**
+```javascript
+restart() {
+    this.init()
+    this.needsTimeReset = true // Signal till main.js att nollställa lastTime
+}
+```
+
+I **main.js runGame():**
+```javascript
+const runGame = (timeStamp) => {
+    // Nollställ lastTime vid restart för att undvika jättestort deltaTime
+    if (game.needsTimeReset) {
+        lastTime = timeStamp
+        game.needsTimeReset = false
+    }
+    
+    // Förhindra för stora deltaTime värden (t.ex. första framen)
+    if (lastTime === 0) {
+        lastTime = timeStamp
+    }
+    const deltaTime = timeStamp - lastTime
+    lastTime = timeStamp
+    
+    // Säkerhets-cap för deltaTime (max 100ms)
+    const cappedDeltaTime = Math.min(deltaTime, 100)
+    
+    // ... rest av koden
+}
+```
+
+### Varför behövs alla tre?
+
+- **lastTime check**: Förhindrar bug vid första framen
+- **deltaTime cap**: Förhindrar extrema värden (t.ex. vid tab-switch)
+- **restart reset**: Förhindrar bug när spelaren trycker R
+
+**Utan dessa fixar:**
+- Spelaren faller genom världen vid start
+- Fiender spawnar felaktigt efter restart
+- Fysiken blir opålitlig vid långa frames
+
 ## Overlay Screens
 
 ### Game Over Screen:
@@ -518,9 +609,9 @@ Vi har nu implementerat ett komplett game state system!
 5. Varför ritar vi spelvärlden även när `gameState === 'GAME_OVER'`? Varför inte bara svart skärm?
 6. Vad händer om vi glömmer `this.totalCoins = this.coins.length` i init()? Hur påverkar det win condition?
 7. Varför använder vi `ctx.save()` och `ctx.restore()` i drawGameOver/drawWin?
-8. Hur skulle du implementera en "ready, set, go!" countdown innan spelet startar?
-9. Beskriv flödet från att spelaren samlar sista myntet till att win-screen visas. Vilka metoder anropas?
-10. Varför är det viktigt att kolla `&& this.gameState === 'PLAYING'` i win/lose conditions? Vad händer utan den checken?
+8. **[BUGGFIX]** Varför kan `deltaTime` bli jättestort vid första framen? Förklara problemet och lösningen.
+9. **[BUGGFIX]** Varför behöver vi `needsTimeReset` flag när spelet startar om med R? Vad händer utan den?
+10. Beskriv flödet från att spelaren samlar sista myntet till att win-screen visas. Vilka metoder anropas?
 
 ## Nästa steg
 

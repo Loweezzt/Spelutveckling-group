@@ -80,6 +80,7 @@ export default class Game {
     
     restart() {
         this.init()
+        this.needsTimeReset = true // Signal till main.js att nollställa lastTime
     }
 
     update(deltaTime) {
