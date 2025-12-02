@@ -6,10 +6,6 @@ export default class Platform extends GameObject {
         this.color = color
     }
 
-    update(deltaTime) {
-        // Plattformar är statiska, gör inget
-    }
-
     draw(ctx) {
         // Rita plattformen
         ctx.fillStyle = this.color

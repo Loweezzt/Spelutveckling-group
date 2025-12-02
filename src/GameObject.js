@@ -8,6 +8,10 @@ export default class GameObject {
         this.height = height
     }
 
+    update(deltaTime) {
+        // Gör inget, implementera i subklasser
+    }
+
     draw(ctx) {
         // Gör inget, implementera i subklasser
     }

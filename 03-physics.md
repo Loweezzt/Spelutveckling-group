@@ -30,10 +30,6 @@ export default class Platform extends GameObject {
         this.color = color
     }
 
-    update(deltaTime) {
-        // Plattformar är statiska
-    }
-
     draw(ctx) {
         ctx.fillStyle = this.color
         ctx.fillRect(this.x, this.y, this.width, this.height)
@@ -41,7 +37,7 @@ export default class Platform extends GameObject {
 }
 ```
 
-I nuläget så är platformarna statiska, de har ingen rörelse eller fysik. Men om så skulle vara fallet (platformar som rör sig upp och ner eller faller) så kan vi lägga till fysik i denna klass också.
+I nuläget så är platformarna statiska, de har ingen rörelse eller fysik. Men om så skulle vara fallet (platformar som rör sig upp och ner eller faller) så kan vi lägga till fysik i denna klass också genom att skapa `update()` metoden.
 
 ## Använda plattformar
 
@@ -74,6 +70,8 @@ draw(ctx) {
     this.platforms.forEach(platform => platform.draw(ctx))
 }
 ```
+
+Här kan vi föja ett tydligt mönster hur vi hanterar detta och hur vi lägger till nya objekt som ärver från `GameObject`. Vi vet att alla objekt har `update()` och `draw()` metoder, så vi kan enkelt iterera genom dem och anropa dessa metoder.
 
 ## Gravitation
 
