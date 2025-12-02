@@ -58,14 +58,14 @@ export default class Projectile extends GameObject {
 
 ### Viktiga delar
 
-**directionX:**
+#### directionX
 Detta används för att beräkna rörelse: `this.x += this.directionX * this.speed * deltaTime`. Vi skickar med den senaste riktningen från spelaren för att bestämma åt vilket håll projektilen ska flyga. Men systemet är inte begränsat till spelare, utan kan användas för andra objekt som kan skjuta.
 
-**startX och maxDistance:**
+#### startX och maxDistance
 När vi skapar en ny projektil utgår vi från var den skapades. Vi räknar sedan ut hur långt den flugit: `Math.abs(this.x - this.startX)`. Anledningen till att vi gör det är att det är viktigt att begränsa hur många projektiler det finns i världen då det kan påverka prestanda negativt.
 Ingen vill väl dessutom att det ska flyga runt projektiler överallt?
 
-**speed:**
+#### speed
 Med speed sätter vi hur snabbt projektilen ska flyga. Det är konstant, men vi kan definitivt applicera acceleration eller luftmotstånd/fysik på projektilen om vi vill.
 
 ## Uppdatera Player.js
@@ -87,10 +87,10 @@ constructor(game, x, y, width, height, color) {
 }
 ```
 
-**lastDirectionX:**
+#### lastDirectionX
 I `lastDirectionX` sparar vi senaste riktningen spelaren rörde sig. Det används för att bestämma projektilens riktning. Vi behöver det här så att vi kan skjuta när spelaren står still.
 
-**Cooldown system:**
+#### Cooldown system
 Utan ett sätt att begränsa hur ofta spelaren kan skjuta skulle det bli väldigt många projektiler snabbt, vilket kan påverka prestanda och spelbalans negativt. Därför använder vi en cooldown-timer som gör att spelaren måste vänta en kort stund mellan varje skott.
 
 Detta kan med fördel kombineras med ett "ammo"-system för att ytterligare begränsa skjutandet.
@@ -178,10 +178,11 @@ addProjectile(x, y, directionX) {
 }
 ```
 
-**Varför en egen metod?**
+### Varför en egen metod
+
+Detta är starkt kopplat till att förstå hur vi fördelar ansvar mellan klasserna i spelet:
 - Player behöver inte veta hur Projectile skapas
 - Game ansvarar för alla objekt i världen
-- Enkelt att lägga till ljud/effekter senare
 
 I `update()`, efter fiendekollisioner, lägg till projektillogik:
 
@@ -213,10 +214,11 @@ this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion)
 this.projectiles = this.projectiles.filter(projectile => !projectile.markedForDeletion)
 ```
 
-**Kollisionslogik:**
+### Kollisionslogik
+
 1. Uppdatera projektilens position
-2. Kolla om den träffar fiende → båda förstörs, +50 poäng
-3. Kolla om den träffar plattform → projektilen förstörs
+2. Kolla om den träffar fiende,  båda förstörs
+3. Kolla om den träffar plattform. projektilen förstörs
 4. Filtrera bort alla markerade objekt
 
 I `draw()`, rita projektilerna:
@@ -239,87 +241,7 @@ this.projectiles.forEach(projectile => {
 // ... rita spelaren och UI
 ```
 
-## Viktiga koncept
 
-### 1. Cooldown-system
-
-Ett cooldown-system förhindrar spam och skapar gameplay-balans:
-
-```javascript
-// Check om vi kan skjuta
-if (canShoot && input) {
-    shoot()
-    canShoot = false
-    timer = cooldownTime
-}
-
-// Räkna ner varje frame
-if (!canShoot) {
-    timer -= deltaTime
-    if (timer <= 0) {
-        canShoot = true
-    }
-}
-```
-
-**Varför behövs detta?**
-- Utan cooldown: 60 projektiler/sekund = obalanserat
-- Med 300ms cooldown: ~3 projektiler/sekund = rimligt
-- Skapar strategi - spelaren måste sikta
-
-### 2. Max räckvidd
-
-Projektiler som lever för evigt är dåligt:
-
-```javascript
-const distanceTraveled = Math.abs(this.x - this.startX)
-if (distanceTraveled > this.maxDistance) {
-    this.markedForDeletion = true
-}
-```
-
-**Varför?**
-- Minnesläcka: Tusentals projektiler i arrayen
-- Prestandaproblem: Uppdatera och rita alla
-- Gameplay: Spelaren måste vara nära fienden
-
-### 3. Direction vs Velocity
-
-**Direction:**
-- Enkel riktning: -1, 0, eller 1
-- Används för enkla binära val
-- Projektilen går antingen vänster eller höger
-
-**Velocity:**
-- Vektor med X och Y komponenter
-- Används för komplex rörelse (gravitation, friktion)
-- Spelaren har både velocityX och velocityY
-
-**För projektiler i detta steg:**
-- Använder `directionX` (-1 eller 1)
-- Multipliceras med `speed` för att få hastighet
-- Enkelt och tydligt för horisontell rörelse
-
-### 4. Separation of concerns
-
-**Player:**
-- Vet när den ska skjuta (X-tangent)
-- Vet VAR projektilen ska skapas (sin position)
-- Vet RIKTNING (lastDirectionX)
-
-**Game:**
-- Äger alla projektiler
-- Hanterar kollisioner
-- Tar bort döda projektiler
-
-**Projectile:**
-- Vet hur den rör sig
-- Vet hur den ritas
-- Vet när den ska dö (max distans)
-
-Varje klass har sitt eget ansvar!
-
-## Förbättringar och utmaningar
 
 ### Utmaning 1: Variabel projektilstorlek
 
@@ -335,9 +257,13 @@ constructor(game, x, y, directionX, size = 12) {
 this.game.addProjectile(projectileX, projectileY, this.lastDirectionX, 16)
 ```
 
-### Utmaning 2: Power-ups
+## Uppgifter
 
-Lägg till snabbare projektiler med power-up:
+För att lära dig mer om projektilsystemet så kan du prova att lägga till något av följande.
+
+### Power-ups
+
+Lägg till snabbare projektiler med power-up. Samma tänk kan appliceras för att minska cooldown mellan projektilerna.
 
 ```javascript
 // I Player
@@ -356,7 +282,11 @@ constructor(game, x, y, directionX, speed = 0.5) {
 }
 ```
 
-### Utmaning 3: Begränsad ammunition
+### Begränsad ammunition
+
+Vi kan verkligen påverka spelbalansen och öka komplexiteten genom att begränsa hur många projektiler spelaren kan skjuta. Vi skapar en ammo variabel som vi räknar ned när spelaren skjuter.
+
+Hur får vi mer ammo då? Antingen så behöver vi passivt öka ammo med en timer eller genom att plocka upp ammo power-ups i spelet.
 
 ```javascript
 // I Player
@@ -373,7 +303,10 @@ shoot() {
 ctx.fillText(`Ammo: ${this.player.currentAmmo}`, 20, 160)
 ```
 
-### Utmaning 4: Projektiler påverkas av gravitation
+### Projektiler påverkas av gravitation
+
+Att projektiler flyger spikrakt kan vara tråkigt. Genom att lägga till gravitation får vi en mer realistisk båge. I grunden handlar detta om att använda gravitation från `this.game.gravity`.
+Här kan du också prova att använda `this.game.friction` för att simulera luftmotstånd.
 
 ```javascript
 // I Projectile
@@ -392,72 +325,14 @@ update(deltaTime) {
 }
 ```
 
-Detta skapar en "båge" - projektilen faller ner!
-
-### Utmaning 5: Skjut i 8 riktningar
-
-```javascript
-// I Player
-shoot() {
-    let dirX = this.lastDirectionX
-    let dirY = 0
-    
-    // Lägg till vertikal riktning
-    if (this.game.inputHandler.keys.has('ArrowUp')) {
-        dirY = -1
-    } else if (this.game.inputHandler.keys.has('ArrowDown')) {
-        dirY = 1
-    }
-    
-    // Normalisera så hastigheten är konstant
-    const magnitude = Math.sqrt(dirX * dirX + dirY * dirY)
-    dirX /= magnitude
-    dirY /= magnitude
-    
-    this.game.addProjectile(x, y, dirX, dirY)
-}
-
-// I Projectile
-constructor(game, x, y, directionX, directionY) {
-    // ...
-    this.directionX = directionX
-    this.directionY = directionY
-}
-
-update(deltaTime) {
-    this.x += this.directionX * this.speed * deltaTime
-    this.y += this.directionY * this.speed * deltaTime
-}
-```
-
 ## Testfrågor
 
 1. Varför använder vi `lastDirectionX` istället för `directionX` för skjutning?
-
 2. Vad händer om vi inte har en `maxDistance` på projektiler? Varför är detta ett problem?
-
 3. Förklara cooldown-systemet. Varför behövs både `canShoot` (boolean) och `shootCooldownTimer` (number)?
-
-4. Varför skapas projektilen från spelarens centrum (`this.x + this.width / 2`) istället för från `this.x`?
-
-5. Vilken ordning händer saker i när spelaren trycker X? Lista stegen från input till projektilen syns på skärmen.
-
-6. Varför markerar vi projektilen för borttagning istället för att ta bort den direkt från arrayen med `splice()`?
-
-7. Om `speed = 0.5` och `deltaTime = 16ms`, hur många pixels rör sig projektilen den framen?
-
-8. Vad är skillnaden mellan `direction` och `velocity`? När använder vi vilket?
-
-9. Varför får spelaren +50 poäng för att döda en fiende med projektil istället för att nudda den? Vad påverkar detta i gameplay?
-
-10. Hur skulle du implementera att projektiler studsar mot väggar istället för att försvinna?
+4. Vilken ordning händer saker i när spelaren trycker X? Lista stegen från input till projektilen syns på skärmen.
+5. Varför markerar vi projektilen för borttagning istället för att ta bort den direkt från arrayen med `splice()`?
+6. Vad är skillnaden mellan `direction` och `velocity`? När använder vi vilket?
+7. Hur skulle du implementera att projektiler studsar mot väggar istället för att försvinna?
 
 ## Nästa steg
-
-Nu kan spelaren skjuta! I nästa steg kan vi:
-- Lägga till musaiming för twinstick shooter-stil
-- Implementera olika projektiltyper
-- Skapa fiender som också kan skjuta
-- Lägga till partikeleffekter vid träff
-
-Byt till `09-` branchen för att fortsätta.
