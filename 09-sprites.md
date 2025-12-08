@@ -1,6 +1,6 @@
 # Steg 9: Sprites och animation
 
-I detta steg ersätter vi de färgade rektanglarna med riktiga sprites och lägger till frame-baserad animation. Vi använder sprite sheets från Pixel Adventure asset pack och implementerar ett flexibelt animationssystem.
+I detta steg ersätter vi de färgade rektanglarna med riktiga sprites och lägger till frame-baserad animation. Vi använder sprite sheets från [Pixel Adventure](https://pixelfrog-assets.itch.io/pixel-adventure-1) asset pack och implementerar ett flexibelt animationssystem.
 
 ## Vad lär vi oss?
 
@@ -9,31 +9,11 @@ I detta steg fokuserar vi på:
 - **Frame-based Animation** - Rita ut olika frames från sprite sheets
 - **Animation States** - Byt mellan idle, run, jump, fall
 - **Sprite Flipping** - Spegelvända sprites med canvas transform
-- **Reusable Animation System** - Flytta animation logic till GameObject
-- **Variable Animation Speed** - Olika animationshastigheter per animation
-- **Error Handling** - Hantera bilder som inte laddas
-
-## Översikt
-
-För att lägga till sprites behöver vi:
-1. **Import sprites** - Använd Vite för att importera bilder
-2. **Animation system** - Hålla koll på frames, timing, states
-3. **drawImage** - Rita sprites istället för fillRect
-4. **Horizontal flip** - Spegelvända sprites baserat på riktning
-5. **GameObject integration** - Flytta duplicerad kod till basklassen
+- **GameObject Integration** - Vi skriver animationslogiken i GameObject för återanvändning
 
 ## Problemet - Färgade rektanglar
 
-Hittills består vårt spel bara av färgade rektanglar:
-- Spelaren är en grön fyrkant med ögon
-- Fiender är röda fyrkanter
-- Ser inte proffsigt ut
-- Svårt att se animation och rörelse
-
-**Detta skapar:**
-- Bristande visuell polish
-- Svårt att kommunicera animation states
-- Tråkigt utseende
+Hittills består vårt spel bara av färgade rektanglar, vi har våran charmiga gröna kub som spelaren, men fienderna är trista röda lådor. Det är dags att byta ut dessa mot riktiga sprites!
 
 ## Sprite Sheets - Vad är det?
 
@@ -46,163 +26,92 @@ En **sprite sheet** är en bild som innehåller flera frames av en animation i e
 
 **Exempel:** `Run (32x32).png` innehåller 12 frames à 32x32 pixels = 384x32 pixels total.
 
-## Ladda Sprites med Vite
+Här är det dock viktigt att varje frame är just 32x32 pixlar och att karaktären är på samma position i varje frame. Annars kommer animationen se hoppig ut och vi kan inte rita rätt del av bilden.
 
-Vite gör det enkelt att importera assets som bilder. Vi kan importera dem direkt i JavaScript-filen:
+## Ladda bilder med Vite
+
+Med Vite så kan vi ladda saker som bilder med hjälp av import statements. Detta gör att Vite kan optimera och hantera bilderna korrekt. Det är dock viktigt att komma ihåg att när Vite gör det så får varje bild en "hashed" path i produktion, så vi kan inte bara skriva in en sträng med sökvägen.
 
 ```javascript
 import idleSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Idle (32x32).png'
-import runSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Run (32x32).png'
-import jumpSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Jump (32x32).png'
-import fallSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Fall (32x32).png'
 ```
 
-**Vite gör:**
-- Optimerar bilderna automatiskt
-- Skapar korrekta paths i build
-- Möjliggör hot reload under utveckling
+### Mina bilder laddas inte!
+
+**Viktigt:** Eftersom många av bilderna kan vara små assets så behöver vi konfigurera Vite att inte inline:a dem som base64 i JavaScript-koden. Detta gör vi genom att sätta `assetsInlineLimit: 0` i `vite.config.js`.
+
+Kolla filen [vite.config.js](./vite.config.js) för detaljer.
 
 ## GameObject - Animation Base Class
 
-För att undvika duplicerad kod flyttar vi animation-logiken till `GameObject`. Detta gör det enkelt att lägga till sprites på alla objekt senare (coins, projectiles, etc.).
+För att undvika duplicerad kod skriver vi animations-logiken i `GameObject`. Det låter oss undvika att varje subklass (Player, Enemy, Coin) skulle behöva implementera samma animation code.
+
+### Hur fungerar frame-baserad animation?
+
+Frame-baserad animation innebär att vi **byter bild** över tid för att skapa en illusion av rörelse. Tänk dig en flipbook - varje sida är ett "frame" och när du bläddrar snabbt ser det ut som rörelse.
+
+**Grundkonceptet:**
+```
+Frame:     0      1      2      3      4  ...  11     0  (loop)
+Tid:      0ms   80ms  160ms  240ms  320ms ... 880ms  960ms
+Action:   [Visa frame 0] → [Visa frame 1] → ... → [Tillbaka till 0]
+```
+
+**Sprite sheet layout:**
+```
+Run (32x32).png (384x32 pixels total)
+┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
+│ 0  │ 1  │ 2  │ 3  │ 4  │ 5  │ 6  │ 7  │ 8  │ 9  │ 10 │ 11 │  
+│32x │32x │32x │32x │32x │32x │32x │32x │32x │32x │32x │32x │
+│32  │32  │32  │32  │32  │32  │32  │32  │32  │32  │32  │32  │
+└────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
+     ↑ frameIndex bestämmer vilket frame vi ritar
+```
+
+**Animation loop:**
+```
+Game Loop (varje frame ~16ms @ 60fps)
+    ↓
+frameTimer += deltaTime (ackumulera tid)
+    ↓
+frameTimer >= frameInterval? (80ms passerat?)
+    ↓ JA
+frameIndex = (frameIndex + 1) % frames (0→1→2→...→11→0)
+frameTimer = 0 (reset)
+    ↓
+drawImage() → Rita frame[frameIndex] från sprite sheet
+```
+
+**Exempel med 3 frames:**
+```
+Time: 0ms
+frameTimer: 0    frameIndex: 0    [Drawing: 😀¹]
+
+Time: 80ms
+frameTimer: 80   frameIndex: 1    [Drawing: 😁²]
+
+Time: 160ms
+frameTimer: 160  frameIndex: 2    [Drawing: 😂³]
+
+Time: 240ms
+frameTimer: 240  frameIndex: 0    [Drawing: 😀¹] ← Loop!
+```
+
+**Varför modulo (%) operator?**
+```javascript
+frameIndex = (frameIndex + 1) % frames
+// frames = 12
+// 11 + 1 = 12 % 12 = 0  ← Går tillbaka till början!
+```
 
 ### Uppdatera GameObject.js
 
-Lägg till animation properties i constructor:
-
-```javascript
-// Basklass för alla objekt i spelet
-export default class GameObject {
-    constructor(game, x = 0, y = 0, width = 0, height = 0) {
-        this.game = game
-        this.x = x
-        this.y = y
-        this.width = width
-        this.height = height
-        this.markedForDeletion = false
-        
-        // Animation properties (optional - används endast om subklasser har sprites)
-        this.animations = null
-        this.currentAnimation = null
-        this.frameIndex = 0
-        this.frameTimer = 0
-        this.frameInterval = 100 // default millisekunder per frame
-        this.spriteLoaded = false
-    }
-    
-    // ... befintlig kod (intersects, getCollisionData)
-}
-```
-
-### Lägg till Animation Methods
-
-```javascript
-// Uppdatera animation state och återställ frame vid ändring
-setAnimation(animationName) {
-    if (this.currentAnimation !== animationName) {
-        this.currentAnimation = animationName
-        this.frameIndex = 0
-        this.frameTimer = 0
-    }
-}
-
-// Hjälpmetod för att ladda sprite med error handling
-loadSprite(animationName, imagePath, frames, frameInterval = null) {
-    if (!this.animations) {
-        this.animations = {}
-    }
-    
-    const img = new Image()
-    img.src = imagePath
-    
-    img.onload = () => {
-        this.spriteLoaded = true
-    }
-    
-    img.onerror = () => {
-        console.error(`Failed to load sprite: ${imagePath} for animation: ${animationName}`)
-    }
-    
-    this.animations[animationName] = {
-        image: img,
-        frames: frames,
-        frameInterval: frameInterval
-    }
-}
-
-// Uppdatera animation frame (anropa i subklassens update)
-updateAnimation(deltaTime) {
-    if (!this.animations || !this.currentAnimation) return
-    
-    const anim = this.animations[this.currentAnimation]
-    if (anim.frames > 1) {
-        // Använd animation-specifik frameInterval om den finns, annars default
-        const interval = anim.frameInterval || this.frameInterval
-        
-        this.frameTimer += deltaTime
-        if (this.frameTimer >= interval) {
-            const wasLastFrame = this.frameIndex === anim.frames - 1
-            this.frameIndex = (this.frameIndex + 1) % anim.frames
-            this.frameTimer = 0
-            
-            // Anropa completion callback när animation är klar
-            if (wasLastFrame && this.onAnimationComplete) {
-                this.onAnimationComplete(this.currentAnimation)
-            }
-        }
-    }
-}
-
-// Rita sprite (anropa i subklassens draw för att rita sprite)
-drawSprite(ctx, camera = null, flipHorizontal = false) {
-    if (!this.spriteLoaded || !this.animations || !this.currentAnimation) return false
-    
-    const anim = this.animations[this.currentAnimation]
-    const frameWidth = anim.image.width / anim.frames
-    const frameHeight = anim.image.height
-    
-    const screenX = camera ? this.x - camera.x : this.x
-    const screenY = camera ? this.y - camera.y : this.y
-    
-    ctx.save()
-    
-    if (flipHorizontal) {
-        ctx.translate(screenX + this.width, screenY)
-        ctx.scale(-1, 1)
-        ctx.drawImage(
-            anim.image,
-            this.frameIndex * frameWidth,
-            0,
-            frameWidth,
-            frameHeight,
-            0,
-            0,
-            this.width,
-            this.height
-        )
-    } else {
-        ctx.drawImage(
-            anim.image,
-            this.frameIndex * frameWidth,
-            0,
-            frameWidth,
-            frameHeight,
-            screenX,
-            screenY,
-            this.width,
-            this.height
-        )
-    }
-    
-    ctx.restore()
-    return true // Returnera true om sprite ritades
-}
-```
+Det är väldigt omfattande ändringar i GameObject. Du kan se den kompletta koden i [GameObject.js](./src/GameObject.js).
 
 ### Viktiga delar
 
 #### setAnimation()
-Denna metod byter animation state och återställer `frameIndex` till 0. Detta är **kritiskt viktigt** för att undvika flickering när vi byter från en multi-frame animation (t.ex. run med 12 frames) till en single-frame animation (t.ex. jump med 1 frame).
+Denna metod byter animation state och återställer `frameIndex` till 0. Detta är viktigt för att undvika att animationen blinker när vi byter animation.
 
 **Problem utan reset:** Om `frameIndex = 11` när vi byter till jump-animation försöker vi rita frame 11 av en 1-frame sprite = undefined behavior/flicker.
 
@@ -233,21 +142,20 @@ if (!this.drawSprite(ctx, camera, flip)) {
 
 ### Import Sprites
 
-Lägg till imports högst upp:
+Lägg till imports högst upp, om du vill se alla imports kolla i [Player.js](./src/Player.js):
 
 ```javascript
 import GameObject from './GameObject.js'
 import idleSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Idle (32x32).png'
-import runSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Run (32x32).png'
-import jumpSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Jump (32x32).png'
-import fallSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Fall (32x32).png'
+
+...
 
 export default class Player extends GameObject {
 ```
 
 ### Ladda Sprites i Constructor
 
-Ersätt sprite-koden med `loadSprite()`:
+För att ladda in bilderna med loadSprite skriver vi i konstruktorn:
 
 ```javascript
 constructor(game, x, y, width, height, color) {
@@ -256,9 +164,9 @@ constructor(game, x, y, width, height, color) {
     
     // ... befintlig kod (velocity, physics, health, shooting)
     
-    // Sprite animation system - ladda sprites med olika hastigheter
-    this.loadSprite('idle', idleSprite, 11, 150)  // Långsammare idle
-    this.loadSprite('run', runSprite, 12, 80)     // Snabbare spring
+    // Sprite animation system - ladda sprites
+    this.loadSprite('idle', idleSprite, 11, 150)
+    this.loadSprite('run', runSprite, 12, 80)
     this.loadSprite('jump', jumpSprite, 1)
     this.loadSprite('fall', fallSprite, 1)
     
@@ -266,14 +174,14 @@ constructor(game, x, y, width, height, color) {
 }
 ```
 
-**Varför olika frameInterval?**
-- **Idle (150ms):** Långsammare = mer avslappnad, vilar
-- **Run (80ms):** Snabbare = mer energi, rörelse
-- **Jump/Fall:** Singel-frame, ingen animation
+Här ser du hur vi laddar varje animation och anger antalet frames och hur snabbt de ska spelas.
+Jump och fall är statiska frames så vi anger bara 1 frame och hoppar över frameInterval.
+
+Vi sätter sedan `this.currentAnimation = 'idle'` för att starta med idle-animationen.
 
 ### Uppdatera Animation State i update()
 
-Lägg till efter position update:
+När vi väl har laddat in bilderna i `Player` behöver vi uppdatera animation state baserat på spelarens rörelse i `update()`-metoden. Det blir en ganska liten ändring just för att logiken för att animera sprites finns i `GameObject`.
 
 ```javascript
 update(deltaTime) {
@@ -304,7 +212,7 @@ update(deltaTime) {
 
 ### Uppdatera draw() med Sprites
 
-Ersätt draw-metoden:
+Draw metoden blir dock lite mer komplex eftersom vi nu försöker rita sprites istället för bara rektanglar. Vi behåller fallback-logiken för att rita en rektangel om sprite inte är laddad än.
 
 ```javascript
 draw(ctx, camera = null) {
@@ -332,87 +240,6 @@ draw(ctx, camera = null) {
 ```
 
 **Flip logic:** `this.lastDirectionX === -1` = vänd sprite när spelaren rör sig vänster.
-
-## Uppdatera Enemy.js (Uppgift)
-
-Nu är det din tur! Implementera sprites för `Enemy`-klassen med samma pattern som `Player`.
-
-### Din uppgift:
-
-1. **Importera sprites:**
-   - Använd "Mask Dude" character från assets
-   - Behöver: Idle och Run sprites
-
-2. **Ladda sprites i constructor:**
-   - Använd `this.loadSprite()`
-   - Idle: 11 frames, 150ms
-   - Run: 12 frames, 90ms
-
-3. **Uppdatera animation state:**
-   - Run när `velocityX !== 0 && isGrounded`
-   - Idle annars
-
-4. **Rita sprite i draw():**
-   - Använd `this.drawSprite()`
-   - Flip baserat på `this.direction === -1`
-   - Fallback till röd rektangel
-
-### Tips:
-
-- Kolla hur Player.js gör det
-- Import path: `./assets/Pixel Adventure 1/Main Characters/Mask Dude/`
-- Testa att fienden flippar när den vänder
-- Kontrollera console för fel om sprites inte laddas
-
-<details>
-<summary>Lösning (expandera om du fastnar)</summary>
-
-```javascript
-import GameObject from './GameObject.js'
-import idleSprite from './assets/Pixel Adventure 1/Main Characters/Mask Dude/Idle (32x32).png'
-import runSprite from './assets/Pixel Adventure 1/Main Characters/Mask Dude/Run (32x32).png'
-
-export default class Enemy extends GameObject {
-    constructor(game, x, y, width, height, patrolDistance = null) {
-        super(game, x, y, width, height)
-        this.color = 'red'
-        
-        // ... befintlig kod
-        
-        // Sprite animation system
-        this.loadSprite('idle', idleSprite, 11, 150)
-        this.loadSprite('run', runSprite, 12, 90)
-        
-        this.currentAnimation = 'run'
-    }
-    
-    update(deltaTime) {
-        // ... befintlig kod
-        
-        // Uppdatera animation state
-        if (this.velocityX !== 0 && this.isGrounded) {
-            this.setAnimation('run')
-        } else {
-            this.setAnimation('idle')
-        }
-        
-        this.updateAnimation(deltaTime)
-    }
-    
-    draw(ctx, camera = null) {
-        const screenX = camera ? this.x - camera.x : this.x
-        const screenY = camera ? this.y - camera.y : this.y
-        
-        const spriteDrawn = this.drawSprite(ctx, camera, this.direction === -1)
-        
-        if (!spriteDrawn) {
-            ctx.fillStyle = this.color
-            ctx.fillRect(screenX, screenY, this.width, this.height)
-        }
-    }
-}
-```
-</details>
 
 ## Canvas drawImage - Sprite Slicing
 
@@ -540,59 +367,71 @@ Kör spelet och se sprites i action:
 5. **Flip** - Sprites vänder sig åt rätt håll
 6. **Enemies** - Fiender animerar när de patrullerar (efter din uppgift)
 
-## Utmaningar
+## Uppgifter
 
-1. **Hit Animation:**
-   - Lägg till "Hit (32x32).png" sprite
-   - Spela när spelaren tar skada
-   - Återgå till idle när klar
+### Enemy.js sprites
 
-2. **Coin Spin:**
-   - Lägg till sprites på `Coin` klassen
-   - Använd "Fruits" från assets
-   - Rotera genom frames kontinuerligt
+Som första steg så ska du nu implementera sprites för `Enemy`-klassen med samma mönster som `Player`.
 
-3. **Projectile Sprite:**
-   - Lägg till sprite för projektiler
-   - Rotera baserat på riktning
+### Din uppgift:
 
-4. **Death Animation:**
-   - Lägg till död-animation för fiender
-   - Använd `onAnimationComplete` för att ta bort
+1. **Importera sprites:**
+   - Använd "Mask Dude" character från assets
+   - Behöver: Idle och Run sprites
 
-5. **Animation Speed Control:**
-   - Lägg till property för att ändra hastighet dynamiskt
-   - Sakta ner när spelaren tar skada
-   - Snabba upp vid power-ups
+2. **Ladda sprites i constructor:**
+   - Använd `this.loadSprite()`
+   - Idle: 11 frames, 150ms
+   - Run: 12 frames, 90ms
 
-## Sammanfattning
+3. **Uppdatera animation state:**
+   - Run när `velocityX !== 0 && isGrounded`
+   - Idle annars
 
-Du har nu:
-- ✅ Laddat sprites med Vite asset imports
-- ✅ Implementerat frame-baserad animation
-- ✅ Skapat reusable animation system i GameObject
-- ✅ Lagt till sprite flipping för riktning
-- ✅ Variabel animationshastighet per animation
-- ✅ Error handling för image loading
-- ✅ Animation completion callbacks
+4. **Rita sprite i draw():**
+   - Använd `this.drawSprite()`
+   - Flip baserat på `this.direction === -1`
+   - Fallback till röd rektangel
 
-**Nästa steg:** Game menus och UI polish - skapa title screen, pause menu, och settings.
+### Tips:
 
-## Reflektion
+- Kolla hur Player.js gör det
+- Import path: `./assets/Pixel Adventure 1/Main Characters/Mask Dude/`
+- Testa att fienden flippar när den vänder
+- Kontrollera console för fel om sprites inte laddas
 
-**Varför GameObject för animation?**
-- Undviker duplicerad kod mellan Player, Enemy, Coin, etc.
-- Lättare att lägga till sprites på nya objekt
-- Konsekvent beteende för all animation
-- Enklare att underhålla och debugga
 
-**Varför inte en separat Sprite-klass?**
-- För denna teaching context är det onödig abstraktion
-- Subklasser behöver fortfarande hålla koll på sin animation state
-- GameObject är redan basen för allt som ritas
+## Ta skada
 
-**När skulle en Sprite-klass vara bra?**
-- Komplex sprite rendering (layers, effects, shaders)
-- Sprite sheets med multipla rader (olika animations på samma bild)
-- Avancerad animation system (easing, blend trees)
-- Particle systems med tusentals sprites
+När spelaren tar skada så har vi tidigare bara blinkat rektangeln. Men nu har vi tillgång till sprites!
+Använd Hit animationen från "Ninja Frog" för att visa en skada-animation när spelaren blir träffad. Om du vill behålla blink-effekten kan du kombinera båda.
+
+Att fundera på för detta är hur du vill att animationen ska fungera:
+- Ska hit-animationen spelas en gång och sedan återgå till idle/run?
+- Ska blink-effekten vara kvar under hit-animationen?
+
+## Byt ut Coin till frukter
+
+I assets så hittar du en mapp med frukter under `./assets/Pixel Adventure 1/Items/Fruits/`. Byt ut coin-sprites mot dessa frukter för att göra spelet mer färgglatt! Frukter kanske dessutom ger olika poäng och det kanske är slumpmässigt vilken frukt som spawnas?
+
+Vissa frukter kanske tillochmed är power-ups som ger spelaren extra liv eller snabbare rörelse under en kort tid!
+
+## Att dyka upp och försvinna med stil
+
+I assets så hittar du även två animationer i `Main Characters` som heter `Appear` och `Disappear`. Dessa kan vi använda för att göra så att spelaren dyker upp med en snygg animation när spelet startar, och försvinner med stil när spelaren dör.
+
+Du kan här använda dig av `onAnimationComplete` callbacken för att starta spelet när appear-animationen är klar, och för att avsluta spelet eller visa "Game Over" när disappear-animationen är klar.
+
+```javascript
+this.onAnimationComplete = (animationName) => {
+    if (animationName === 'appear') {
+        this.gameStarted = true
+    } else if (animationName === 'disappear') {
+        this.gameOver = true
+    }
+}
+```
+
+## Testfrågor
+
+## Nästa steg

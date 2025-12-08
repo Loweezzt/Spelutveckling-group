@@ -242,8 +242,11 @@ this.projectiles.forEach(projectile => {
 ```
 
 
+## Uppgifter
 
-### Utmaning 1: Variabel projektilstorlek
+För att lära dig mer om projektilsystemet så kan du prova att lägga till något av följande.
+
+### Variabel projektilstorlek
 
 Lägg till en parameter för storlek:
 
@@ -256,10 +259,6 @@ constructor(game, x, y, directionX, size = 12) {
 // I Player.shoot()
 this.game.addProjectile(projectileX, projectileY, this.lastDirectionX, 16)
 ```
-
-## Uppgifter
-
-För att lära dig mer om projektilsystemet så kan du prova att lägga till något av följande.
 
 ### Power-ups
 
