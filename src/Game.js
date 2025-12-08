@@ -6,6 +6,7 @@ import Enemy from './Enemy.js'
 import UserInterface from './UserInterface.js'
 import Camera from './Camera.js'
 import Projectile from './Projectile.js'
+import MainMenu from './menus/MainMenu.js'
 
 export default class Game {
     constructor(width, height) {
@@ -21,10 +22,11 @@ export default class Game {
         this.friction = 0.00015 // luftmotstånd för att bromsa fallhastighet
 
         // Game state
-        this.gameState = 'PLAYING' // PLAYING, GAME_OVER, WIN
+        this.gameState = 'MENU' // MENU, PLAYING, GAME_OVER, WIN
         this.score = 0
         this.coinsCollected = 0
         this.totalCoins = 0 // Sätts när vi skapar coins
+        this.currentMenu = null // Nuvarande meny som visas
 
         this.inputHandler = new InputHandler(this)
         this.ui = new UserInterface(this)
@@ -35,11 +37,13 @@ export default class Game {
         
         // Initiera spelet
         this.init()
+        
+        // Skapa och visa huvudmenyn
+        this.currentMenu = new MainMenu(this)
     }
     
     init() {
-        // Återställ game state
-        this.gameState = 'PLAYING'
+        // Återställ score (men inte game state - det hanteras av constructor/restart)
         this.score = 0
         this.coinsCollected = 0
         
@@ -118,9 +122,25 @@ export default class Game {
     
     restart() {
         this.init()
+        this.gameState = 'PLAYING'
+        this.currentMenu = null
     }
 
     update(deltaTime) {
+        // Uppdatera menyn om den är aktiv
+        if (this.gameState === 'MENU' && this.currentMenu) {
+            this.currentMenu.update(deltaTime)
+            this.inputHandler.keys.clear() // Rensa keys så de inte läcker till spelet
+            return
+        }
+        
+        // Kolla Escape för att öppna menyn under spel
+        if (this.inputHandler.keys.has('Escape') && this.gameState === 'PLAYING') {
+            this.gameState = 'MENU'
+            this.currentMenu = new MainMenu(this)
+            return
+        }
+        
         // Kolla restart input
         if (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) {
             if (this.gameState === 'GAME_OVER' || this.gameState === 'WIN') {
@@ -283,5 +303,10 @@ export default class Game {
         
         // Rita UI sist (utan camera offset - alltid synligt)
         this.ui.draw(ctx)
+        
+        // Rita meny överst om den är aktiv
+        if (this.currentMenu) {
+            this.currentMenu.draw(ctx)
+        }
     }
 }
