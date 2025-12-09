@@ -7,6 +7,15 @@ import UserInterface from './UserInterface.js'
 import Camera from './Camera.js'
 import Projectile from './Projectile.js'
 import MainMenu from './menus/MainMenu.js'
+import Background from './Background.js'
+import BackgroundObject from './BackgroundObject.js'
+import blueBg from './assets/Pixel Adventure 1/Background/Blue.png'
+import greenBg from './assets/Pixel Adventure 1/Background/Green.png'
+import cloud1 from './assets/clouds/Small Cloud 1.png'
+import cloud2 from './assets/clouds/Small Cloud 2.png'
+import cloud3 from './assets/clouds/Small Cloud 3.png'
+import bigClouds from './assets/clouds/Big Clouds.png'
+import pinkBg from './assets/Pixel Adventure 1/Background/Pink.png'
 
 export default class Game {
     constructor(width, height) {
@@ -34,6 +43,56 @@ export default class Game {
         // Camera
         this.camera = new Camera(0, 0, width, height)
         this.camera.setWorldBounds(this.worldWidth, this.worldHeight)
+        
+        // Background layers (för parallax scrolling)
+        this.backgrounds = [
+            new Background(this, blueBg, {
+                tiled: true,
+                tileWidth: 64,
+                tileHeight: 64,
+                scrollSpeed: 0.3 // Slow parallax (far background)
+            }),
+            new Background(this, bigClouds, {
+                tiled: true,
+                tileWidth: 448,
+                tileHeight: 101,
+                tileY: false, // Tila bara horisontellt, inte vertikalt
+                scrollSpeed: 0.6, // Mid background (faster than far, slower than foreground)
+                yPosition: this.height - 141, // Precis ovanför marken (40px mark + 101px clouds)
+                height: 101 // Bara 101px högt
+            })
+            // Lägg till fler lager för parallax effekt:
+            // new Background(this, brownBg, {
+            //     tiled: true,
+            //     tileWidth: 64,
+            //     tileHeight: 64,
+            //     scrollSpeed: 0.8 // Near background (faster)
+            // })
+        ]
+        
+        // Background objects (moln, fåglar, etc som rör sig)
+        this.backgroundObjects = [
+            new BackgroundObject(this, 200, 100, cloud1, {
+                scrollSpeed: 0.2,
+                velocity: { x: 0.01, y: 0 }, // Slow drift höger
+                scale: 1.5
+            }),
+            new BackgroundObject(this, 600, 80, cloud2, {
+                scrollSpeed: 0.25,
+                velocity: { x: 0.015, y: 0 },
+                scale: 1.2
+            }),
+            new BackgroundObject(this, 1000, 120, cloud3, {
+                scrollSpeed: 0.18,
+                velocity: { x: 0.008, y: 0 },
+                scale: 1.8
+            }),
+            new BackgroundObject(this, 1500, 90, cloud1, {
+                scrollSpeed: 0.3,
+                velocity: { x: 0.012, y: 0 },
+                scale: 1.3
+            })
+        ]
         
         // Initiera spelet
         this.init()
@@ -152,6 +211,12 @@ export default class Game {
         // Uppdatera bara om spelet är i PLAYING state
         if (this.gameState !== 'PLAYING') return
         
+        // Uppdatera backgrounds
+        this.backgrounds.forEach(bg => bg.update(deltaTime))
+        
+        // Uppdatera background objects (moln)
+        this.backgroundObjects.forEach(obj => obj.update(deltaTime))
+        
         // Uppdatera alla spelobjekt
         this.gameObjects.forEach(obj => obj.update(deltaTime))
         
@@ -263,6 +328,12 @@ export default class Game {
     }
 
     draw(ctx) {
+        // Rita backgrounds först (längst bak)
+        this.backgrounds.forEach(bg => bg.draw(ctx, this.camera))
+        
+        // Rita background objects (moln, fåglar)
+        this.backgroundObjects.forEach(obj => obj.draw(ctx, this.camera))
+        
         // Rita alla plattformar med camera offset
         this.platforms.forEach(platform => {
             if (this.camera.isVisible(platform)) {
