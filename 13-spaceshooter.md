@@ -262,10 +262,13 @@ const enemyData = [
 
 ## Debug Mode
 
-Tryck 'P' för att toggla debug mode:
+Tryck 'P' för att toggla debug mode, vilket ritar hitboxes för spelaren och fiender. Det är viktigt för att kunna justera kollisionsdetektering och se att allt fungerar som det ska.
+
 - Rita hitboxes runt enemies och projektiler
 - Användbart för collision tuning
-- Simple keypress toggle med state tracking
+
+Att slå på debug hanteras av `SpaceShooterGame`, men att rita det hanteras av varje enskild klass i deras `draw()`-metod.
+Här kan det nog vara en möjlighet att refaktorera in debug-ritning i `GameObject`-klassen i framtiden för att undvika duplicerad kod.
 
 ```javascript
 update(deltaTime) {
@@ -280,11 +283,7 @@ update(deltaTime) {
 
 ## Ljud och Musik
 
-Background music loop:
-- Storm.mp3 från assets
-- 30% volume (inte för högt)
-- Loop: true
-- Startar i init() med autoplay error handling
+Loopade bakgrundsmusik gör en så stor skillnad, tycker i alla fall jag. Så nu kör vi!
 
 ```javascript
 this.backgroundMusic = new Audio(stormMusic)
@@ -298,7 +297,7 @@ this.backgroundMusic.play().catch(err => {
 })
 ```
 
-## Sammanfattning - Arkitektoniska principer
+## Sammanfattning - arkitektur
 
 ### Template Method Pattern
 - **GameBase** definierar game loop struktur
@@ -321,11 +320,6 @@ this.backgroundMusic.play().catch(err => {
 - Kan enkelt skapa nya speltyper (top-down shooter, bullet hell, etc.)
 - Gemensamma system (input, camera, UI) delas automatiskt
 
-**Testbarhet:**
-- EnemySpawner kan testas isolerat
-- Mock game-objekt för unit testing
-- Tydliga gränssnitt mellan komponenter
-
 **Underhållbarhet:**
 - Logisk separation gör det lätt att hitta kod
 - Ändringar i spawning påverkar inte game loop
@@ -336,14 +330,3 @@ this.backgroundMusic.play().catch(err => {
 - Wave patterns kan läggas till i spawner
 - Boss mechanics kan extenderas utan att röra base-klassen
 
-## Nästa steg
-
-Möjliga förbättringar:
-- **Achievement system** - Tracka prestationer över game sessions
-- **Weapon upgrades** - Olika skjutmönster som powerups
-- **Enemy formations** - Organiserade attack-patterns
-- **Story mode** - Level progression med olika bossar
-- **Local storage** - Spara high scores
-- **Particle effects** - Explosioner och visual feedback
-
-Arkitekturen vi har nu gör det enkelt att lägga till dessa features utan att skriva om grundstrukturen!
