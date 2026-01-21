@@ -13,7 +13,8 @@ export default class Game {
     constructor(width, height) {
         this.width = width
         this.height = height
-        
+
+    
         // World size (större än skärmen)
         this.worldWidth = width * 3 // 3x bredare
         this.worldHeight = height
@@ -43,6 +44,21 @@ export default class Game {
         this.currentMenu = new MainMenu(this)
     }
     
+    // Create and register a pushable box
+    spawnBox(x, y, w = 90, h = 100, color = '#654321') {
+        const b = new Rectangle(this, x, y, w, h, color)
+        b.isBox = true
+        b.velocityX = 0
+        b.velocityY = 0
+        b.stopped = false
+        b.stopAfter = null
+        b.stopTimer = 0
+        b.markedForDeletion = false
+        if (!this.gameObjects) this.gameObjects = []
+        this.gameObjects.push(b)
+        return b
+    }
+    
 
     init() {
         // Återställ score (men inte game state - det hanteras av constructor/restart)
@@ -55,28 +71,21 @@ export default class Game {
         this.camera.targetX = 0
         this.camera.targetY = 0
 
-        this.gameObjects = []
-        const box = new Rectangle(this, 300, 399, 90, 100, '#654321')
-        box.isBox = true
-        box.velocityX = 0
+    this.gameObjects = []
+    this.spawnBox(300, 399)
+    this.spawnBox(490, 399)
 
-        box.stopAfter = 100
-
-        box.velocityY = 0
-        this.gameObjects.push(box)
         
-
-
-    
-
+        
+        
         this.player = new Player(this, 50, 240, 50, 50, 'green')
 
         // Skapa plattformar för nivån (utspridda över hela worldWidth)
         this.platforms = [
             // Marken (hela nivån)
             new Platform(this, 0, this.height - 80, 300, 300, '#654321'),
-            new Platform(this, 390, this.height - 80, 1000, 300, '#654321'),
-
+            new Platform(this, 580, this.height - 80, 1000, 300, '#654321'),
+            new Platform(this, 390, 400, 100, 300, '#654321')
             // Plattformar (utspridda över nivån)
           
         ]
@@ -116,6 +125,7 @@ export default class Game {
         if (this.gameState === 'MENU' && this.currentMenu) {
             this.currentMenu.update(deltaTime)
             this.inputHandler.keys.clear() // Rensa keys så de inte läcker till spelet
+            this.gameObjects.filter(o => !o.markedForDeletion)
             return
         }
         
@@ -152,20 +162,22 @@ export default class Game {
         // Uppdatera spelaren
         this.player.update(deltaTime)
 
+        
+
 
         
 
         this.gameObjects.forEach(obj => {
             if (!obj.isBox) return
-            const threshold = 30
+            const threshold = 10
             const push = 0.0008
             const px = this.player.x + this.player.width
             const bx = obj.x + obj.width/2
             const dx = bx - px
             const dist = Math.abs(dx)
             if (dist < threshold) {
-                const dir = 1
-                obj.velocityX = (obj.velocityX || 0) + dir * push * deltaTime
+                console.log('marked for deletion', { bx: bx.toFixed(1), px: px.toFixed(1), dist: dist.toFixed(1) })
+                obj.markedForDeletion = true
             }
             const max = 0.8
             obj.velocityX = Math.max(-max, Math.min(max, obj.velocityX))
@@ -174,9 +186,16 @@ export default class Game {
         })
 
         this.gameObjects.forEach(obj => {
-            if (obj.isBox || obj.stopped) return
-            const eps = 0.5
-            if (Math.abs(obj.x - 500) <= eps) {
+            if (!obj.isBox || obj.stopped) return
+            const eps = 1
+            const centerX = obj.x + obj.width / 2
+            // Convert the desired screen X (center of view) into world coordinates
+            const stopScreenX = this.camera.width / 2 // use camera center instead of magic 500
+            const worldStopX = this.camera.x + stopScreenX
+            if (Math.abs(centerX - worldStopX) <= eps) {
+                obj.x = worldStopX - obj.width / 2
+                obj.velocityX = 0
+                obj.stopped = true
                 return
             }
             
@@ -218,6 +237,8 @@ export default class Game {
                 coin.markedForDeletion = true
             }
         })
+
+        
         
         // Kontrollera kollision med fiender
         this.enemies.forEach(enemy => {
@@ -252,7 +273,7 @@ export default class Game {
         this.coins = this.coins.filter(coin => !coin.markedForDeletion)
         this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion)
         this.projectiles = this.projectiles.filter(projectile => !projectile.markedForDeletion)
-
+        this.gameObjects = this.gameObjects.filter(obj => !obj.markedForDeletion)
         // Förhindra att spelaren går utöver world bounds
         if (this.player.x < 0) {
             this.player.x = 0
