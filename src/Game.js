@@ -102,13 +102,20 @@ export default class Game {
 
         // Skapa fiender i nivån (utspridda över hela worldWidth)
         this.enemies = [
-            new Enemy(this, 400, this.height - 300, 40, 40, 150),
+            new Enemy(this, 300, this.height - 20, 90, 50),
+        ]
+
+        // Skapa spikes i nivån
+        this.spikes = [
+            new Spikes(this, 600, this.height - 90, 40, 10),
+            new Spikes(this, 750, this.height - 90, 40, 10),
         ]
         
         // Skapa dart shooters i nivån
         this.dartShooters = [
-            new Dart(this, 600, 200, 40, 40, 100),
-            new Dart(this, 1200, 300, 40, 40, 150),
+            new Dart(this, this.height - 200, 0, 40, 40, 100),
+            new Dart(this, this.height - 100, 0, 40, 40, 100),
+            new Dart(this, this.height - 0, 0, 40, 40, 100),
         ]
         
         // Projektiler
@@ -117,8 +124,8 @@ export default class Game {
         // Skapa andra objekt i spelet (valfritt)
     }
     
-    addProjectile(x, y, directionX) {
-        const projectile = new Projectile(this, x, y, directionX)
+    addProjectile(x, y, directionX, owner = null, directionY = 0) {
+        const projectile = new Projectile(this, x, y, directionX, owner, directionY)
         this.projectiles.push(projectile)
     }
     
@@ -172,6 +179,9 @@ export default class Game {
         
         // Uppdatera fiender
         this.enemies.forEach(enemy => enemy.update(deltaTime))
+        
+        // Uppdatera spikes
+        this.spikes.forEach(spike => spike.update(deltaTime))
         
         // Uppdatera dart shooters
         this.dartShooters.forEach(dart => dart.update(deltaTime))
@@ -237,6 +247,18 @@ export default class Game {
             enemy.handleScreenBounds(this.worldWidth)
         })
         
+        // Kontrollera kollisioner för spikes med plattformar
+        this.spikes.forEach(spike => {
+            spike.isGrounded = false
+            
+            this.platforms.forEach(platform => {
+                spike.handlePlatformCollision(platform)
+            })
+            
+            // Vänd vid world bounds istället för screen bounds
+            spike.handleScreenBounds(this.worldWidth)
+        })
+        
         // Dart shooters svävar - ingen plattformkollision behövs
         
         // Kontrollera kollisioner mellan fiender
@@ -264,6 +286,14 @@ export default class Game {
             if (this.player.intersects(enemy) && !enemy.markedForDeletion) {
                 // Spelaren tar skada
                 this.player.takeDamage(enemy.damage)
+            }
+        })
+        
+        // Kontrollera kollision med spikes
+        this.spikes.forEach(spike => {
+            if (this.player.intersects(spike) && !spike.markedForDeletion) {
+                // Spelaren tar skada från spikes
+                this.player.takeDamage(spike.damage)
             }
         })
         
@@ -341,6 +371,13 @@ export default class Game {
         this.enemies.forEach(enemy => {
             if (this.camera.isVisible(enemy)) {
                 enemy.draw(ctx, this.camera)
+            }
+        })
+        
+        // Rita spikes med camera offset
+        this.spikes.forEach(spike => {
+            if (this.camera.isVisible(spike)) {
+                spike.draw(ctx, this.camera)
             }
         })
         

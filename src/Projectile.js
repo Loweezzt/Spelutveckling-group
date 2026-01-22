@@ -1,21 +1,32 @@
 import GameObject from './GameObject.js'
 
 export default class Projectile extends GameObject {
-    constructor(game, x, y, directionX) {
+    constructor(game, x, y, directionX, owner = null, directionY = 0) {
         super(game, x, y, 12, 6)
         this.directionX = directionX // -1 för vänster, 1 för höger
-        this.speed = 0.5 // pixels per millisekund
+        this.directionY = directionY // -1 för upp, 0 för horisontellt, 1 för ner
+        this.speed = 0.001 // pixels per millisekund (mycket långsammare)
         this.startX = x // Spara startposition
+        this.startY = y // Spara startposition Y
         this.maxDistance = 800 // Max en skärm långt
-        this.color = 'orange'
+        
+        // Identifiera vem som skjuter
+        this.owner = owner
+        this.color = owner && owner.constructor.name === 'Dart' ? 'black' : 'orange'
     }
     
     update(deltaTime) {
-        // Flytta projektilen
+        // Flytta projektilen horisontellt och vertikalt
         this.x += this.directionX * this.speed * deltaTime
+        this.y += this.directionY * this.speed * deltaTime
+        
+        // Applicera gravity på vertikala projektiler
+        if (this.directionY !== 0) {
+            this.directionY += this.game.gravity * deltaTime * 500 // Mindre gravity påverkan för att inte bli för snabb
+        }
         
         // Kolla om projektilen har flugit för långt
-        const distanceTraveled = Math.abs(this.x - this.startX)
+        const distanceTraveled = Math.hypot(this.x - this.startX, this.y - this.startY)
         if (distanceTraveled > this.maxDistance) {
             this.markedForDeletion = true
         }

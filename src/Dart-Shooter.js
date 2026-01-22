@@ -5,23 +5,15 @@ export default class Dart extends GameObject {
         super(game, x, y, width, height)
         this.color = 'purple' // Lila för att skilja från enemies
         
-        // Svävning - Dart shooters svävar på samma höjd
-        this.hoverY = y // Original höjd för att sväva omkring
-        this.hoverSpeed = 0.0005 // Hur snabbt den svävar upp/ner
-        this.hoverAmount = 20 // Hur långt upp/ner den svävar
-        this.hoverTime = 0
-        
         this.damage = 1 // Skada till player
         
         // Shooting system - skjuter konstant
-        this.shootCooldown = 1500 // millisekunder mellan skott
+        this.shootCooldown = 500 // millisekunder mellan skott
         this.shootCooldownTimer = 0
     }
 
     update(deltaTime) {
-        // Svävning upp och ner
-        this.hoverTime += deltaTime * this.hoverSpeed
-        this.y = this.hoverY + Math.sin(this.hoverTime) * this.hoverAmount
+        // Dart shooter är helt stillastående - ingen svävning
         
         // Uppdatera shoot cooldown
         if (this.shootCooldownTimer > 0) {
@@ -35,7 +27,7 @@ export default class Dart extends GameObject {
     shoot() {
         // Dart shooter skjuter rakt neråt (directionY = 1)
         const projectileX = this.x + this.width / 2
-        const projectileY = this.y + this.height / 2
+        const projectileY = this.y + this.height + 10 // Börja UNDER shootern för att inte plockas upp
         
         this.game.addEnemyProjectile(projectileX, projectileY, this, 1) // 1 = neråt
         
