@@ -6,6 +6,7 @@ import Projectile from './Projectile.js'
 import MainMenu from './menus/MainMenu.js'
 import Rectangle from './Rectangle.js'
 import Spikes from './spike.js'
+import Dart from './Dart-Shooter.js'
 import Flower from './flower.js'
 import Plant from './Plant.js'
 import Level1 from './levels/Level1.js'
@@ -116,19 +117,25 @@ export default class Game {
 
         // Skapa fiender i nivån (utspridda över hela worldWidth)
         this.enemies = [
-            new Enemy(this, 300, this.height - 20, 90, 50, 'red', 100, 1),
-            new Enemy(this, 490, this.height - 20, 90, 50, 'red', 150, 1),
+            new Enemy(this, 300, this.height - 20, 90, 50),
+        ]
+
+        // Skapa spikes i nivån
+        this.spikes = [
+            new Spikes(this, 600, this.height - 90, 40, 10),
+            new Spikes(this, 750, this.height - 90, 40, 10),
         ]
         
+        // Skapa dart shooters i nivån
+        this.dartShooters = [
+            new Dart(this, this.height - 200, 0, 40, 40, 100),
+            new Dart(this, this.height - 100, 0, 40, 40, 100),
+            new Dart(this, this.height - 0, 0, 40, 40, 100),
         this.Spikes = [
             new Spikes(this, 700, 389, 28, 10),
             new Spikes(this, 850, 389, 28, 10),
         ]
-
-
-
-
-
+        
         // Projektiler
         this.projectiles = []
 
@@ -136,8 +143,14 @@ export default class Game {
         this.gameObjects = []
     }
     
-    addProjectile(x, y, directionX) {
-        const projectile = new Projectile(this, x, y, directionX)
+    addProjectile(x, y, directionX, owner = null, directionY = 0) {
+        const projectile = new Projectile(this, x, y, directionX, owner, directionY)
+        this.projectiles.push(projectile)
+    }
+    
+    addEnemyProjectile(x, y, owner = null, directionY = 0) {
+        const directionX = owner.direction === -1 ? -1 : 0 // 0 om skjuter rakt neråt
+        const projectile = new Projectile(this, x, y, directionX, owner, directionY)
         this.projectiles.push(projectile)
     }
     
@@ -223,9 +236,13 @@ export default class Game {
         
         // Uppdatera fiender
         this.enemies.forEach(enemy => enemy.update(deltaTime))
-
-        this.Spikes.forEach(spike => spike.update(deltaTime))
-
+        
+        // Uppdatera spikes
+        this.spikes.forEach(spike => spike.update(deltaTime))
+        
+        // Uppdatera dart shooters
+        this.dartShooters.forEach(dart => dart.update(deltaTime))
+        
         // Uppdatera spelaren
         this.player.update(deltaTime)
 
@@ -302,18 +319,21 @@ export default class Game {
 
             enemy.handleScreenBounds(this.worldWidth)
         })
-
-        this.Spikes.forEach(spike => {
+        
+        // Kontrollera kollisioner för spikes med plattformar
+        this.spikes.forEach(spike => {
             spike.isGrounded = false
-
+            
             this.platforms.forEach(platform => {
                 spike.handlePlatformCollision(platform)
             })
-
+            
             // Vänd vid world bounds istället för screen bounds
             spike.handleScreenBounds(this.worldWidth)
         })
-
+        
+        // Dart shooters svävar - ingen plattformkollision behövs
+        
         // Kontrollera kollisioner mellan fiender
         this.enemies.forEach((enemy, index) => {
             this.enemies.slice(index + 1).forEach(otherEnemy => {
@@ -322,14 +342,6 @@ export default class Game {
             })
         })
 
-
-
-        this.Spikes.forEach((spike, index) => {
-            this.Spikes.slice(index + 1).forEach(otherSpike => {
-                spike.handleEnemyCollision(otherSpike)
-                otherSpike.handleEnemyCollision(spike)
-            })
-        })
         // Kontrollera kollision med mynt
 
         this.coins.forEach(coin => {
@@ -348,16 +360,23 @@ export default class Game {
                 this.player.takeDamage(1)
             }
         })
-
-        this.Spikes.forEach(spike => {
+        
+        // Kontrollera kollision med spikes
+        this.spikes.forEach(spike => {
             if (this.player.intersects(spike) && !spike.markedForDeletion) {
-                // Spelaren tar skada
+                // Spelaren tar skada från spikes
                 this.player.takeDamage(spike.damage)
             }
         })
-
+        
         // Uppdatera projektiler
         this.projectiles.forEach(projectile => {
+            projectile.update(deltaTime)
+            
+            // Kolla kollision med fiender (endast spelaren skjuter kan skada fiender)
+            this.enemies.forEach(enemy => {
+                if (projectile.intersects(enemy) && !enemy.markedForDeletion && projectile.owner === this.player) {
+                    enemy.takeDamage(1)
             this.enemies.forEach(enemy => {
                 if (projectile.intersects(enemy)) {
                     enemy.markedForDeletion = true
@@ -365,8 +384,12 @@ export default class Game {
                     this.score += 50
                 }
             })
-
             
+            // Kolla kollision med spelaren (endast fiender och dart shooters skjuter kan skada spelaren)
+            if (projectile.intersects(this.player) && projectile.owner !== this.player && !projectile.markedForDeletion) {
+                this.player.takeDamage(1)
+                projectile.markedForDeletion = true
+            }
             
             // Kolla kollision med plattformar/världen
             this.platforms.forEach(platform => {
@@ -506,10 +529,18 @@ export default class Game {
                 enemy.draw(ctx, this.camera)
             }
         })
-
-        this.Spikes.forEach(spike => {
+        
+        // Rita spikes med camera offset
+        this.spikes.forEach(spike => {
             if (this.camera.isVisible(spike)) {
                 spike.draw(ctx, this.camera)
+            }
+        })
+        
+        // Rita dart shooters med camera offset
+        this.dartShooters.forEach(dart => {
+            if (this.camera.isVisible(dart)) {
+                dart.draw(ctx, this.camera)
             }
         })
         

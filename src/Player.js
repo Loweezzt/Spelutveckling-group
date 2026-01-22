@@ -128,7 +128,7 @@ export default class Player extends GameObject {
         const projectileX = this.x + this.width / 2
         const projectileY = this.y + this.height / 2
         
-        this.game.addProjectile(projectileX, projectileY, this.lastDirectionX)
+        this.game.addProjectile(projectileX, projectileY, this.lastDirectionX, this, 0)
         
         // Sätt cooldown
         this.canShoot = false
