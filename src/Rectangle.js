@@ -27,9 +27,11 @@ export default class Rectangle extends GameObject {
         }
     }
 
-    draw(ctx) {
-        // Rita rektangeln
+    draw(ctx, camera = null) {
+        // Rita rektangeln med camera offset om camera finns
+        const screenX = camera ? this.x - camera.x : this.x
+        const screenY = camera ? this.y - camera.y : this.y
         ctx.fillStyle = this.color
-        ctx.fillRect(this.x, this.y, this.width, this.height)
+        ctx.fillRect(screenX, screenY, this.width, this.height)
     }
 }

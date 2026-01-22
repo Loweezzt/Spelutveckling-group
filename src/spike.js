@@ -1,6 +1,6 @@
 import GameObject from './GameObject.js'
 
-export default class Enemy extends GameObject {
+export default class Spikes extends GameObject {
     constructor(game, x, y, width, height, patrolDistance = null) {
         super(game, x, y, width, height)
         this.color = 'red' // Röd

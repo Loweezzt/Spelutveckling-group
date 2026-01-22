@@ -6,7 +6,6 @@ export default class GameObject {
         this.y = y
         this.width = width
         this.height = height
-        this.markedForDeletion = false
         
         // Animation properties (optional - används endast om subklasser har sprites)
         this.animations = null

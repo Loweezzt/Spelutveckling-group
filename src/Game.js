@@ -4,6 +4,9 @@ import UserInterface from './UserInterface.js'
 import Camera from './Camera.js'
 import Projectile from './Projectile.js'
 import MainMenu from './menus/MainMenu.js'
+import Rectangle from './Rectangle.js'
+import Spikes from './spike.js'
+import Flower from './flower.js'
 import Plant from './Plant.js'
 import Level1 from './levels/Level1.js'
 import Level2 from './levels/Level2.js'
@@ -12,7 +15,8 @@ export default class Game {
     constructor(width, height) {
         this.width = width
         this.height = height
-        
+
+    
         // World size (större än skärmen)
         this.worldWidth = width * 3 // 3x bredare
         this.worldHeight = height
@@ -50,6 +54,21 @@ export default class Game {
         this.currentMenu = new MainMenu(this)
     }
     
+    // Create and register a pushable box
+    spawnBox(x, y, w = 90, h = 100, color = '#654321') {
+        const b = new Rectangle(this, x, y, w, h, color)
+        b.isBox = true
+        b.velocityX = 0
+        b.velocityY = 0
+        b.stopped = false
+        b.stopAfter = null
+        b.stopTimer = 0
+        b.markedForDeletion = false
+        if (!this.gameObjects) this.gameObjects = []
+        this.gameObjects.push(b)
+        return b
+    }
+    
 
     init() {
     
@@ -63,7 +82,53 @@ export default class Game {
         this.camera.y = 0
         this.camera.targetX = 0
         this.camera.targetY = 0
+
+    this.gameObjects = []
+    this.spawnBox(300, 399)
+    this.spawnBox(490, 399)
+
         
+        
+        
+        this.player = new Player(this, 50, 240, 50, 50, 'green')
+
+        // Skapa plattformar för nivån (utspridda över hela worldWidth)
+        this.platforms = [
+            // Marken (hela nivån)
+            new Platform(this, 0, this.height - 80, 300, 300, '#654321'),
+            new Platform(this, 580, this.height - 80, 1000, 300, '#654321'),
+            new Platform(this, 390, 400, 100, 300, '#654321')
+            // Plattformar (utspridda över nivån)
+          
+        ]
+
+        // Skapa mynt i nivån (utspridda över hela worldWidth)
+        this.coins = [
+            new Coin(this, 200, this.height - 400, 20, 20, 'gold'),
+            // Nya mynt längre bort
+
+        ]
+        this.totalCoins = this.coins.length
+
+
+        const flower = new Flower(this, 1500, 350, './src/assets/blomma.png')
+        this.gameObjects.push(flower)
+
+        // Skapa fiender i nivån (utspridda över hela worldWidth)
+        this.enemies = [
+            new Enemy(this, 300, this.height - 20, 90, 50, 'red', 100, 1),
+            new Enemy(this, 490, this.height - 20, 90, 50, 'red', 150, 1),
+        ]
+        
+        this.Spikes = [
+            new Spikes(this, 700, 389, 28, 10),
+            new Spikes(this, 850, 389, 28, 10),
+        ]
+
+
+
+
+
         // Projektiler
         this.projectiles = []
 
@@ -125,6 +190,8 @@ export default class Game {
         if (this.gameState === 'MENU' && this.currentMenu) {
             this.currentMenu.update(deltaTime)
             this.inputHandler.keys.clear() // Rensa keys så de inte läcker till spelet
+            this.gameObjects.filter(o => !o.markedForDeletion)
+            return
             return true
         }
 
@@ -133,6 +200,37 @@ export default class Game {
             this.currentMenu = new MainMenu(this)
             return true
         }
+        
+        // Kolla restart input
+        if (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) {
+            if (this.gameState === 'GAME_OVER' || this.gameState === 'WIN') {
+                this.restart()
+                return
+            }
+        }
+        
+        // Uppdatera bara om spelet är i PLAYING state
+        if (this.gameState !== 'PLAYING') return
+        
+        // Uppdatera alla spelobjekt
+        this.gameObjects.forEach(obj => obj.update(deltaTime))
+        
+        // Uppdatera plattformar (även om de är statiska)
+        this.platforms.forEach(platform => platform.update(deltaTime))
+        
+        // Uppdatera mynt
+        this.coins.forEach(coin => coin.update(deltaTime))
+        
+        // Uppdatera fiender
+        this.enemies.forEach(enemy => enemy.update(deltaTime))
+
+        this.Spikes.forEach(spike => spike.update(deltaTime))
+
+        // Uppdatera spelaren
+        this.player.update(deltaTime)
+
+        
+
 
         if (
             (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) &&
@@ -145,6 +243,21 @@ export default class Game {
         return false
     }
 
+        this.gameObjects.forEach(obj => {
+            if (!obj.isBox) return
+            const threshold = 10
+            const push = 0.0008
+            const px = this.player.x + this.player.width
+            const bx = obj.x + obj.width/2
+            const dx = bx - px
+            const dist = Math.abs(dx)
+            if (dist < threshold) {
+                console.log('marked for deletion', { bx: bx.toFixed(1), px: px.toFixed(1), dist: dist.toFixed(1) })
+                obj.markedForDeletion = true
+            }
+            const max = 0.8
+            obj.velocityX = Math.max(-max, Math.min(max, obj.velocityX))
+            obj.x += obj.velocityX * deltaTime
     isPlaying() {
         return this.gameState === 'PLAYING'
     }
@@ -157,6 +270,22 @@ export default class Game {
         this.player.update(deltaTime)
     }
 
+        this.gameObjects.forEach(obj => {
+            if (!obj.isBox || obj.stopped) return
+            const eps = 1
+            const centerX = obj.x + obj.width / 2
+            // Convert the desired screen X (center of view) into world coordinates
+            const stopScreenX = this.camera.width / 2 // use camera center instead of magic 500
+            const worldStopX = this.camera.x + stopScreenX
+            if (Math.abs(centerX - worldStopX) <= eps) {
+                obj.x = worldStopX - obj.width / 2
+                obj.velocityX = 0
+                obj.stopped = true
+                return
+            }
+            
+        })
+        // Antag att spelaren inte står på marken, tills vi hittar en kollision
     handleCollisions() {
         this.player.isGrounded = false
 
@@ -174,6 +303,35 @@ export default class Game {
             enemy.handleScreenBounds(this.worldWidth)
         })
 
+        this.Spikes.forEach(spike => {
+            spike.isGrounded = false
+
+            this.platforms.forEach(platform => {
+                spike.handlePlatformCollision(platform)
+            })
+
+            // Vänd vid world bounds istället för screen bounds
+            spike.handleScreenBounds(this.worldWidth)
+        })
+
+        // Kontrollera kollisioner mellan fiender
+        this.enemies.forEach((enemy, index) => {
+            this.enemies.slice(index + 1).forEach(otherEnemy => {
+                enemy.handleEnemyCollision(otherEnemy)
+                otherEnemy.handleEnemyCollision(enemy)
+            })
+        })
+
+
+
+        this.Spikes.forEach((spike, index) => {
+            this.Spikes.slice(index + 1).forEach(otherSpike => {
+                spike.handleEnemyCollision(otherSpike)
+                otherSpike.handleEnemyCollision(spike)
+            })
+        })
+        // Kontrollera kollision med mynt
+
         this.coins.forEach(coin => {
             if (this.player.intersects(coin) && !coin.markedForDeletion) {
                 this.score += coin.value
@@ -182,12 +340,23 @@ export default class Game {
             }
         })
 
+        
+        
+        // Kontrollera kollision med fiender
         this.enemies.forEach(enemy => {
             if (this.player.intersects(enemy)) {
                 this.player.takeDamage(1)
             }
         })
 
+        this.Spikes.forEach(spike => {
+            if (this.player.intersects(spike) && !spike.markedForDeletion) {
+                // Spelaren tar skada
+                this.player.takeDamage(spike.damage)
+            }
+        })
+
+        // Uppdatera projektiler
         this.projectiles.forEach(projectile => {
             this.enemies.forEach(enemy => {
                 if (projectile.intersects(enemy)) {
@@ -197,12 +366,27 @@ export default class Game {
                 }
             })
 
+            
+            
+            // Kolla kollision med plattformar/världen
+            this.platforms.forEach(platform => {
+                if (projectile.intersects(platform)) {
             this.platforms.forEach(p => {
                 if (projectile.intersects(p)) {
                     projectile.markedForDeletion = true
                 }
             })
         })
+        
+        // Ta bort alla objekt markerade för borttagning
+        this.coins = this.coins.filter(coin => !coin.markedForDeletion)
+        this.enemies = this.enemies.filter(enemy => !enemy.markedForDeletion)
+        this.projectiles = this.projectiles.filter(projectile => !projectile.markedForDeletion)
+        this.gameObjects = this.gameObjects.filter(obj => !obj.markedForDeletion)
+        // Förhindra att spelaren går utöver world bounds
+        if (this.player.x < 0) {
+            this.player.x = 0
+        }
     }
 
     cleanup() {
@@ -320,6 +504,12 @@ export default class Game {
         this.enemies.forEach(enemy => {
             if (this.camera.isVisible(enemy)) {
                 enemy.draw(ctx, this.camera)
+            }
+        })
+
+        this.Spikes.forEach(spike => {
+            if (this.camera.isVisible(spike)) {
+                spike.draw(ctx, this.camera)
             }
         })
         
