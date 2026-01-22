@@ -9,6 +9,7 @@ import Projectile from './Projectile.js'
 import MainMenu from './menus/MainMenu.js'
 import Rectangle from './Rectangle.js'
 import Spikes from './spike.js'
+import Flower from './flower.js'
 
 export default class Game {
     constructor(width, height) {
@@ -99,6 +100,10 @@ export default class Game {
         ]
         this.totalCoins = this.coins.length
 
+
+        const flower = new Flower(this, 1500, 350, './src/assets/blomma.png')
+        this.gameObjects.push(flower)
+
         // Skapa fiender i nivån (utspridda över hela worldWidth)
         this.enemies = [
             new Enemy(this, 300, this.height - 20, 90, 50, 'red', 100, 1),
@@ -106,8 +111,8 @@ export default class Game {
         ]
         
         this.Spikes = [
-            new Spikes(this, 700, 389, 35, 10),
-            new Spikes(this, 850, 389, 35, 10),
+            new Spikes(this, 700, 389, 28, 10),
+            new Spikes(this, 850, 389, 28, 10),
         ]
 
 
