@@ -166,7 +166,7 @@ export default class Game {
             this.currentMenu.update(deltaTime)
             this.inputHandler.keys.clear() // Rensa keys så de inte läcker till spelet
             this.gameObjects.filter(o => !o.markedForDeletion)
-            return
+            return true
             return true
         }
 

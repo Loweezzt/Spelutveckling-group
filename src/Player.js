@@ -46,11 +46,12 @@ export default class Player extends GameObject {
 
     update(deltaTime) {
         // Horisontell rörelse
-        if (this.game.inputHandler.keys.has('ArrowLeft')) {
+        if (this.game.inputHandler.keys.has('ArrowLeft') && this.health > 0) {
             this.velocityX = -this.moveSpeed
             this.directionX = -1
             this.lastDirectionX = -1 // Spara riktning
-        } else if (this.game.inputHandler.keys.has('ArrowRight')) {
+            
+        } else if (this.game.inputHandler.keys.has('ArrowRight') && this.health > 0) {
             this.velocityX = this.moveSpeed
             this.directionX = 1
             this.lastDirectionX = 1 // Spara riktning
@@ -60,7 +61,7 @@ export default class Player extends GameObject {
         }
 
         // Hopp - endast om spelaren är på marken
-        if (this.game.inputHandler.keys.has(' ') && this.isGrounded) {
+        if (this.game.inputHandler.keys.has(' ') && this.isGrounded && this.health > 0) {
             this.velocityY = this.jumpPower
             this.isGrounded = false
         }
