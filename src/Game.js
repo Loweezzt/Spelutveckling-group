@@ -39,6 +39,7 @@ export default class Game {
         this.currentLevelIndex = 0
         this.currentLevel = null
         this.deathZones = []
+        this.spikes = []
 
         this.inputHandler = new InputHandler(this)
         this.ui = new UserInterface(this)
@@ -75,13 +76,12 @@ export default class Game {
 
 
     init() {
-        // Projektiler
         this.projectiles = []
-        // maybe tas bort idk
         this.gameObjects = []
+        this.spikes = []
         this.deathZones = []
 
-        // återställ score (men inte game state - det hanteras av constructor/restart)
+        // återställ score
         this.score = 0
         this.coinsCollected = 0
 
@@ -91,54 +91,7 @@ export default class Game {
         this.camera.targetX = 0
         this.camera.targetY = 0
 
-        this.gameObjects = []
-        this.spawnBox(300, 399)
-        this.spawnBox(490, 399)
-
-
-
-
-        this.player = new Player(this, 50, 240, 50, 50, 'green')
-
-        // Skapa plattformar för nivån (utspridda över hela worldWidth)
-        this.platforms = [
-            // Marken (hela nivån)
-            new Platform(this, 0, this.height - 80, 300, 300, '#654321'),
-            new Platform(this, 580, this.height - 80, 1000, 300, '#654321'),
-            new Platform(this, 390, 400, 100, 300, '#654321')
-            // Plattformar (utspridda över nivån)
-
-        ]
-
-        // Skapa mynt i nivån (utspridda över hela worldWidth)
-        this.coins = [
-            new Coin(this, 200, this.height - 400, 20, 20, 'gold'),
-            // Nya mynt längre bort
-
-        ]
-        this.totalCoins = this.coins.length
-
-
-        const flower = new Flower(this, 1500, 350, './src/assets/blomma.png')
-        this.gameObjects.push(flower)
-
-        // Skapa fiender i nivån (utspridda över hela worldWidth)
-        this.enemies = [
-            new Enemy(this, 300, this.height - 20, 90, 50, 'red', 100, 1),
-            new Enemy(this, 490, this.height - 20, 90, 50, 'red', 150, 1),
-        ]
-
-        this.Spikes = [
-            new Spikes(this, 700, 389, 28, 10),
-            new Spikes(this, 850, 389, 28, 10),
-        ]
-
-
-
-
-
-        // Projektiler
-        this.projectiles = []
+        this.loadLevel(this.currentLevelIndex)
     }
 
     handleDebugInput() {
@@ -183,16 +136,20 @@ export default class Game {
         this.currentLevel = new LevelClass(this)
         this.currentLevel.init()
 
+        // HÄR definieras data!
         const data = this.currentLevel.getData()
 
-        this.platforms = data.platforms
-        this.coins = data.coins
-        this.enemies = data.enemies
+        // Hämta data från Level-klassen
+        this.platforms = data.platforms || []
+        this.coins = data.coins || []
+        this.enemies = data.enemies || []
         this.levelEndZone = data.levelEndZone
         this.deathZones = data.deathZones || []
+        this.spikes = data.spikes || []
 
         this.totalCoins = this.coins.length
 
+        // Skapa spelaren med position från data
         this.player = new Player(
             this,
             data.playerSpawn.x,
@@ -220,32 +177,32 @@ export default class Game {
         }
 
         // Kolla restart input
-        if (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) {
-            if (this.gameState === 'GAME_OVER' || this.gameState === 'WIN') {
-                this.restart()
-                return
-            }
-        }
+        // if (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) {
+        //     if (this.gameState === 'GAME_OVER' || this.gameState === 'WIN') {
+        //         this.restart()
+        //         return
+        //     }
+        // }
 
         // Uppdatera bara om spelet är i PLAYING state
-        if (this.gameState !== 'PLAYING') return
+        // if (this.gameState !== 'PLAYING') return
 
-        // Uppdatera alla spelobjekt
-        this.gameObjects.forEach(obj => obj.update(deltaTime))
+        // // Uppdatera alla spelobjekt
+        // this.gameObjects.forEach(obj => obj.update(deltaTime))
 
-        // Uppdatera plattformar (även om de är statiska)
-        this.platforms.forEach(platform => platform.update(deltaTime))
+        // // Uppdatera plattformar (även om de är statiska)
+        // this.platforms.forEach(platform => platform.update(deltaTime))
 
-        // Uppdatera mynt
-        this.coins.forEach(coin => coin.update(deltaTime))
+        // // Uppdatera mynt
+        // this.coins.forEach(coin => coin.update(deltaTime))
 
-        // Uppdatera fiender
-        this.enemies.forEach(enemy => enemy.update(deltaTime))
+        // // Uppdatera fiender
+        // this.enemies.forEach(enemy => enemy.update(deltaTime))
 
-        this.Spikes.forEach(spike => spike.update(deltaTime))
+        // this.Spikes.forEach(spike => spike.update(deltaTime))
 
-        // Uppdatera spelaren
-        this.player.update(deltaTime)
+        // // Uppdatera spelaren
+        // this.player.update(deltaTime)
 
 
 
@@ -262,10 +219,10 @@ export default class Game {
     }
 
     updateEntites(deltaTime) {
-        this.platforms.forEach(p => p.update(deltaTime))
-        this.coins.forEach(c => c.update(deltaTime))
-        this.enemies.forEach(e => e.update(deltaTime))
-        this.projectiles.forEach(p => p.update(deltaTime))
+        // this.platforms.forEach(p => p.update(deltaTime))
+        // this.coins.forEach(c => c.update(deltaTime))
+        // this.enemies.forEach(e => e.update(deltaTime))
+        // this.projectiles.forEach(p => p.update(deltaTime))
         this.player.update(deltaTime)
     }
     cleanup() {
@@ -305,7 +262,7 @@ export default class Game {
             enemy.handleScreenBounds(this.worldWidth)
         })
 
-        this.Spikes.forEach(spike => {
+        this.spikes.forEach(spike => {
             spike.isGrounded = false
 
             this.platforms.forEach(platform => {
@@ -326,8 +283,8 @@ export default class Game {
 
 
 
-        this.Spikes.forEach((spike, index) => {
-            this.Spikes.slice(index + 1).forEach(otherSpike => {
+        this.spikes.forEach((spike, index) => {
+            this.spikes.slice(index + 1).forEach(otherSpike => {
                 spike.handleEnemyCollision(otherSpike)
                 otherSpike.handleEnemyCollision(spike)
             })
@@ -351,7 +308,7 @@ export default class Game {
             }
         })
 
-        this.Spikes.forEach(spike => {
+        this.spikes.forEach(spike => {
             if (this.player.intersects(spike) && !spike.markedForDeletion) {
                 // Spelaren tar skada
                 this.player.takeDamage(spike.damage)
@@ -368,17 +325,18 @@ export default class Game {
                 }
 
             })
-        })
 
-        // Kolla kollision med plattformar/världen
-        this.platforms.forEach(platform => {
-            if (projectile.intersects(platform)) {
-                this.platforms.forEach(p => {
-                    if (projectile.intersects(p)) {
-                        projectile.markedForDeletion = true
-                    }
-                })
-            }
+
+            // Kolla kollision med plattformar/världen
+            this.platforms.forEach(platform => {
+                if (projectile.intersects(platform)) {
+                    this.platforms.forEach(p => {
+                        if (projectile.intersects(p)) {
+                            projectile.markedForDeletion = true
+                        }
+                    })
+                }
+            })
         })
 
         this.gameObjects.forEach(obj => {
@@ -459,7 +417,7 @@ export default class Game {
 
     update(deltaTime) {
         if (this.handleMenu(deltaTime)) return
-        if (!this.isPlaying()) return
+        // if (!this.isPlaying()) return
 
         this.handleDebugInput()
         this.handlePlanting(deltaTime)
@@ -508,7 +466,7 @@ export default class Game {
             }
         })
 
-        this.Spikes.forEach(spike => {
+        this.spikes.forEach(spike => {
             if (this.camera.isVisible(spike)) {
                 spike.draw(ctx, this.camera)
             }
