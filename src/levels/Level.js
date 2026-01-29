@@ -6,6 +6,7 @@ export default class Level {
         this.coins = []
         this.enemies = []
         this.deathZones = []
+        this.spikes = []
 
         this.playerSpawn = {x: 50, y: 200}
     }
@@ -14,6 +15,7 @@ export default class Level {
         this.createPlatforms()
         this.createCoins()
         this.createEnemies()
+        this.createSpikes()
         this.createEndZone()
         this.createDeathZones()
 
@@ -22,6 +24,7 @@ export default class Level {
     createPlatforms() {}
     createCoins() {}
     createEnemies() {}
+    createSpikes() {}
     createEndZone() {}
     createDeathZones() {}
 
@@ -31,6 +34,7 @@ export default class Level {
             coins: this.coins,
             enemies: this.enemies,
             deathZones: this.deathZones,
+            spikes: this.spikes,
             playerSpawn: this.playerSpawn,
             levelEndZone: this.levelEndZone
         }

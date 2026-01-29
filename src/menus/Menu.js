@@ -23,8 +23,15 @@ export default class Menu {
         this.selectedColor = '#FFD700'
         this.keyColor = '#4CAF50'
         
-        // Track which keys have been pressed (för att undvika upprepade tryckningar)
         this.lastKeys = new Set()
+
+        // Layout-konstanter (så vi kan använda samma värden i update och draw)
+        this.layout = {
+            startY: 160,
+            lineHeight: 60,
+            hitBoxWidth: 400, // Hur brett område musen kan träffa
+            hitBoxHeight: 40
+        }
     }
     
     // Abstract methods - subclasses must override
@@ -38,6 +45,44 @@ export default class Menu {
     
     update(deltaTime) {
         const keys = this.game.inputHandler.keys
+        const mouse = this.game.mouse
+
+        // --- NYTT: MUS-LOGIK ---
+        // Vi kollar om musen hovrar över något alternativ
+        if (mouse) {
+            this.options.forEach((option, index) => {
+                // Hoppa över om det inte är ett klickbart val (t.ex. bara text)
+                if (!option.action && !option.key) return
+
+                // Beräkna positionen för detta alternativ (samma logik som i draw)
+                const centerX = this.game.width / 2
+                const y = this.layout.startY + index * this.layout.lineHeight
+                
+                // Definiera en "hitbox" (en osynlig rektangel runt texten)
+                // 
+                const hitBox = {
+                    left: centerX - (this.layout.hitBoxWidth / 2),
+                    right: centerX + (this.layout.hitBoxWidth / 2),
+                    top: y - (this.layout.hitBoxHeight / 2),
+                    bottom: y + (this.layout.hitBoxHeight / 2)
+                }
+
+                // Kolla om musen är innanför hitboxen
+                if (mouse.x >= hitBox.left && mouse.x <= hitBox.right &&
+                    mouse.y >= hitBox.top && mouse.y <= hitBox.bottom) {
+                    
+                    // Sätt detta alternativ till valt
+                    this.selectedIndex = index
+
+                    // Om musen är klickad, kör action
+                    if (mouse.clicked && option.action) {
+                        option.action()
+                        mouse.clicked = false // "Förbruka" klicket så det inte händer igen direkt
+                    }
+                }
+            })
+        }
+        // -----------------------
         
         // Kolla Enter för vald option
         if (keys.has('Enter') && !this.lastKeys.has('Enter')) {
@@ -56,7 +101,6 @@ export default class Menu {
         
         // Pil upp/ner för att navigera
         if (keys.has('ArrowDown') && !this.lastKeys.has('ArrowDown')) {
-            // Hitta nästa valbara option (skippa null actions)
             let newIndex = this.selectedIndex
             do {
                 newIndex = (newIndex + 1) % this.options.length
@@ -64,7 +108,6 @@ export default class Menu {
             this.selectedIndex = newIndex
         }
         if (keys.has('ArrowUp') && !this.lastKeys.has('ArrowUp')) {
-            // Hitta föregående valbara option (skippa null actions)
             let newIndex = this.selectedIndex
             do {
                 newIndex = (newIndex - 1 + this.options.length) % this.options.length
@@ -92,9 +135,9 @@ export default class Menu {
         ctx.textBaseline = 'middle'
         ctx.fillText(this.title, this.game.width / 2, 80)
         
-        // Rita options
-        const startY = 160
-        const lineHeight = 60
+        // Använd samma layout-värden som i update()
+        const startY = this.layout.startY
+        const lineHeight = this.layout.lineHeight
         
         this.options.forEach((option, index) => {
             const y = startY + index * lineHeight
@@ -119,12 +162,15 @@ export default class Menu {
             } else {
                 ctx.fillText(displayText, this.game.width / 2, y)
             }
+
+            // DEBUG: Om du vill se hitboxarna, avkommentera raden nedan:
+            // ctx.strokeRect(this.game.width/2 - 200, y - 20, 400, 40)
         })
         
         // Rita instruktioner längst ner
         ctx.fillStyle = '#888888'
         ctx.font = '18px Arial'
-        ctx.fillText('Use Arrow Keys to navigate, Enter to select', this.game.width / 2, this.game.height - 50)
+        ctx.fillText('Use Arrow Keys or Mouse to navigate', this.game.width / 2, this.game.height - 50)
         
         ctx.restore()
     }

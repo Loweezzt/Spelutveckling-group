@@ -3,7 +3,6 @@ import plantSpriteImage from './assets/Pixel Adventure 1/Other/plant_grow.png'
 
 export default class Plant extends GameObject {
     constructor(game, x, y, size = 64) {
-        // Vi justerar hitboxens höjd först när den är klar
         super(game, x, y - size, size, size) 
         
         this.frameWidth = 64
@@ -12,35 +11,38 @@ export default class Plant extends GameObject {
         this.image = new Image()
         this.image.src = plantSpriteImage
         
-        
         this.overlap = 14 
-        this.growthSpeed = 80 // Pixlar per sekund som den växer uppåt
+        this.growthSpeed = 80 
         
-        // --- VÄXANDE LOGIK ---
-        this.growthState = 0 // 0=Kruka, 1=Mitten, 2=ToppStam, 3=Huvud
+        this.growthState = 0 
         this.currentSegmentHeight = 0 
         
         this.frameTimer = 0
         this.frameInterval = 100
 
-        // krukan
         this.potFrameIndex = 0
         this.potMaxFrame = 7
         
-        // mellan
         this.middleFrame = 10 
         this.upperStemFrame = 11 
 
-        // huvud
         this.headFrameIndex = 12
         this.headMinFrame = 12
         this.headMaxFrame = 15
         
         this.isFullyGrown = false
         this.isPotFinished = false
+
+        this.isWatered = false
+    }
+
+    water() {
+        this.isWatered = true
     }
 
     update(deltaTime) {
+        if (!this.isWatered) return
+
         this.frameTimer += deltaTime
 
         if (!this.isPotFinished) {
@@ -55,7 +57,6 @@ export default class Plant extends GameObject {
                 }
             }
         } 
-        
         
         else if (!this.isFullyGrown) {
             this.currentSegmentHeight += this.growthSpeed * (deltaTime / 1000)
@@ -100,7 +101,6 @@ export default class Plant extends GameObject {
         const row = Math.floor(frameIndex / columns)
 
         const sourceX = col * this.frameWidth
-        
         const sourceY = row * this.frameHeight
         
         const drawY = y + (64 - height)
@@ -124,15 +124,12 @@ export default class Plant extends GameObject {
         const drawY = camera ? baseY - camera.y : baseY
         
         const size = 64
-
         const stepUp = size - this.overlap
 
         if (this.image && this.image.complete) {
-            
             this.drawFrame(ctx, this.potFrameIndex, drawX, drawY)
 
             if (this.growthState > 1) { 
-
                 this.drawFrame(ctx, this.middleFrame, drawX, drawY - stepUp)
             } else if (this.growthState === 1) {
                 this.drawGrowingFrame(ctx, this.middleFrame, drawX, drawY - stepUp, this.currentSegmentHeight)
@@ -149,10 +146,6 @@ export default class Plant extends GameObject {
             } else if (this.growthState === 3) {
                 this.drawGrowingFrame(ctx, this.headFrameIndex, drawX, drawY - (stepUp * 3), this.currentSegmentHeight)
             }
-
-        // } else {
-        //     ctx.fillStyle = 'green'
-        //     ctx.fillRect(drawX, drawY, this.width, this.height)
         }
     }
 }
