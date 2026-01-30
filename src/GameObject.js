@@ -7,12 +7,11 @@ export default class GameObject {
         this.width = width
         this.height = height
         
-        // Animation properties (optional - används endast om subklasser har sprites)
         this.animations = null
         this.currentAnimation = null
         this.frameIndex = 0
         this.frameTimer = 0
-        this.frameInterval = 100 // millisekunder per frame
+        this.frameInterval = 100 
         this.spriteLoaded = false
     }
 
@@ -20,8 +19,6 @@ export default class GameObject {
         // Gör inget, implementera i subklasser
     }
 
-    // Kolla om detta objekt kolliderar med ett annat
-    // AABB kollision - funkar för rektanglar
     intersects(other) {
         return this.x < other.x + other.width &&
                this.x + this.width > other.x &&
@@ -29,17 +26,15 @@ export default class GameObject {
                this.y + this.height > other.y
     }
 
-    // Returnerar kollisionsdata med riktning
     getCollisionData(other) {
         if (!this.intersects(other)) return null
         
-        // Beräkna överlappning från varje riktning
         const overlapLeft = (this.x + this.width) - other.x
         const overlapRight = (other.x + other.width) - this.x
         const overlapTop = (this.y + this.height) - other.y
         const overlapBottom = (other.y + other.height) - this.y
         
-        // Hitta minsta överlappningen för att bestämma riktning
+        // hitta minsta överlappningen för att bestämma riktning
         const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom)
         
         // Bestäm riktning baserat på minsta överlappningen
@@ -51,17 +46,17 @@ export default class GameObject {
         return null
     }
     
-    // Uppdatera animation state och återställ frame vid ändring
     setAnimation(animationName) {
         if (this.currentAnimation !== animationName) {
             this.currentAnimation = animationName
-            this.frameIndex = 0
+            const anim = this.animations[animationName] // nytt
+            this.frameIndex = anim ? anim.startFrame : 0 // nytt
             this.frameTimer = 0
         }
     }
     
-    // Hjälpmetod för att ladda sprite med error handling
-    loadSprite(animationName, imagePath, frames, frameInterval = null) {
+    // la till totalFramesInSheet, startFrame och endFrame
+    loadSprite(animationName, imagePath, totalFramesInSheet, startFrame = 0, endFrame = null, frameInterval = null) {
         if (!this.animations) {
             this.animations = {}
         }
@@ -73,13 +68,17 @@ export default class GameObject {
             this.spriteLoaded = true
         }
         
+        const finalEndFrame = endFrame !== null ? endFrame : totalFramesInSheet - 1
+
         img.onerror = () => {
             console.error(`Failed to load sprite: ${imagePath} for animation: ${animationName}`)
         }
         
         this.animations[animationName] = {
             image: img,
-            frames: frames,
+            totalFrames: totalFramesInSheet, // hur många frames bilden har totalt
+            startFrame: startFrame, // var animationen börjar
+            endFrame: finalEndFrame, // var animationen slutar
             frameInterval: frameInterval
         }
     }
@@ -89,19 +88,23 @@ export default class GameObject {
         if (!this.animations || !this.currentAnimation) return
         
         const anim = this.animations[this.currentAnimation]
-        if (anim.frames > 1) {
+        const length = anim.endFrame - anim.startFrame + 1
+        if (length > 0) {
             // Använd animation-specifik frameInterval om den finns, annars default
             const interval = anim.frameInterval || this.frameInterval
             
             this.frameTimer += deltaTime
             if (this.frameTimer >= interval) {
-                const wasLastFrame = this.frameIndex === anim.frames - 1
-                this.frameIndex = (this.frameIndex + 1) % anim.frames
                 this.frameTimer = 0
+                this.frameIndex++
                 
-                // Anropa completion callback när animation är klar
-                if (wasLastFrame && this.onAnimationComplete) {
-                    this.onAnimationComplete(this.currentAnimation)
+                const wasLastFrame = this.frameIndex > anim.endFrame
+
+                if (wasLastFrame) {
+                    this.frameIndex = anim.startFrame
+                    if (this.onAnimationComplete) {
+                        this.onAnimationComplete(this.currentAnimation)
+                    }
                 }
             }
         }
@@ -112,7 +115,7 @@ export default class GameObject {
         if (!this.spriteLoaded || !this.animations || !this.currentAnimation) return false
         
         const anim = this.animations[this.currentAnimation]
-        const frameWidth = anim.image.width / anim.frames
+        const frameWidth = anim.image.width / anim.totalFrames
         const frameHeight = anim.image.height
         
         const screenX = camera ? this.x - camera.x : this.x

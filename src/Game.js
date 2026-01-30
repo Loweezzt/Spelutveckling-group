@@ -2,15 +2,19 @@ import Player from './Player.js'
 import InputHandler from './InputHandler.js'
 import UserInterface from './UserInterface.js'
 import Camera from './Camera.js'
+import mainMenu from './menus/MainMenu.js'
 import Projectile from './Projectile.js'
 import MainMenu from './menus/MainMenu.js'
 import Rectangle from './Rectangle.js'
+import themesong from './assets/GrowingPainsTheme.mp3'
 import Spikes from './spike.js'
 import Flower from './flower.js'
 import Plant from './Plant.js'
 import Level1 from './levels/Level1.js'
 import Level2 from './levels/Level2.js'
 import Level3 from './levels/Level3.js'
+import Level4 from './levels/level4.js'
+import TitleScreen from './menus/TitleScreen.js'
 
 export default class Game {
     constructor(width, height) {
@@ -22,7 +26,7 @@ export default class Game {
         this.worldHeight = height
 
         // Fysik
-        this.gravity = 0.002 // pixels per millisekund^2
+        this.gravity = 0.003     // pixels per millisekund^2
         this.friction = 0.00015 // luftmotstånd för att bromsa fallhastighet
 
         // Game state
@@ -34,12 +38,36 @@ export default class Game {
         this.plant = null
         this.gameStateExtra = null // t.ex. 'WATERING'
 
+        this.isLevelTransitioning = false
+        this.transitionCircleRadius = 0
+        this.bgMusic = new Audio(themesong)
+        this.bgMusic.loop = true
+        this.bgMusic.volume = 0.3
+
+        this.mouse = {
+            x: 0,
+            y: 0,
+            clicked: false
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            this.mouse.x = e.offsetX || e.clientX
+            this.mouse.y = e.offsetY || e.clientY
+        })
+        window.addEventListener('mousedown', () => {
+            this.mouse.clicked = true
+        })
+        window.addEventListener('mouseup', () => {
+            this.mouse.clicked = false
+        })
+
         // levels
-        this.levels = [Level1, Level2, Level3]
+        this.levels = [Level4, Level1, Level3, Level2]
         this.currentLevelIndex = 0
         this.currentLevel = null
         this.deathZones = []
         this.spikes = []
+        this.fakespikes = []
 
         this.inputHandler = new InputHandler(this)
         this.ui = new UserInterface(this)
@@ -48,12 +76,18 @@ export default class Game {
         this.debug = true
         this.debugKeyPressed = false
 
+
+        this.muteKeyPressed = false
+
+
         // Camera
         this.camera = new Camera(0, 0, width, height)
         this.camera.setWorldBounds(this.worldWidth, this.worldHeight)
 
         // Initiera spelet
         this.init()
+        this.gameHasStarted = false
+
 
         // Skapa och visa huvudmenyn
         this.currentMenu = new MainMenu(this)
@@ -79,6 +113,7 @@ export default class Game {
         this.projectiles = []
         this.gameObjects = []
         this.spikes = []
+        this.fakespikes = []  // LÄGG TILL DENNA RAD
         this.deathZones = []
 
         // återställ score
@@ -132,6 +167,10 @@ export default class Game {
     }
 
     loadLevel(index) {
+
+        this.isLevelTransitioning = false
+        this.transitionCircleRadius = Math.sqrt(this.width ** 2 + this.height ** 2)
+
         const LevelClass = this.levels[index]
         this.currentLevel = new LevelClass(this)
         this.currentLevel.init()
@@ -146,6 +185,7 @@ export default class Game {
         this.levelEndZone = data.levelEndZone
         this.deathZones = data.deathZones || []
         this.spikes = data.spikes || []
+        this.fakespikes = data.fakespikes || []  // ← LÄGG TILL DENNA RAD
 
         this.totalCoins = this.coins.length
 
@@ -157,16 +197,71 @@ export default class Game {
             50, 50, 'green'
         )
 
-        this.plant = null
+        if (this.levelEndZone) {
+            const plantSize = 64
+            this.plant = new Plant(
+                this,
+                this.levelEndZone.x + this.levelEndZone.width / 2 - (plantSize / 2),
+                this.levelEndZone.y + this.levelEndZone.height,
+                plantSize
+            )
+        } else {
+            this.plant = null
+        }
         this.gameStateExtra = null
     }
+    handleDebugInput() {
+        if (this.inputHandler.keys.has('d') || this.inputHandler.keys.has('D')) {
+            if (!this.debugKeyPressed) {
+                this.debug = !this.debug
+                this.debugKeyPressed = true
+                console.log('Debug mode:', this.debug)
+            }
+        } else {
+            this.debugKeyPressed = false
+        }
+    }
 
+    // nytt
+    handleMusicInput() {
+        if (this.inputHandler.keys.has('m') || this.inputHandler.keys.has('M')) {
+            if (!this.muteKeyPressed) {
+                this.bgMusic.muted = !this.bgMusic.muted // byt mellan tyst/ljud
+                this.muteKeyPressed = true
+                console.log('Music Muted:', this.bgMusic.muted)
+            }
+        } else {
+            this.muteKeyPressed = false
+        }
+    }
+
+    restart() {
+        this.init()
+        this.gameHasStarted = true // nytt
+        this.gameState = 'PLAYING'
+        this.currentMenu = null
+        this.bgMusic.currentTime = 0 // nytt
+
+        this.bgMusic.play().catch(error => {
+            console.warn('musik kunde inte startas:', error)
+        })
+    }
+
+    playerInLevelEndZone() {
+        const player = this.player
+        const zone = this.levelEndZone
+        if (!zone) return false
+        return (
+            player.x < zone.x + zone.width &&
+            player.x + player.width > zone.x &&
+            player.y < zone.y + zone.height &&
+            player.y + player.height > zone.y
+        )
+    }
     handleMenu(deltaTime) {
         if (this.gameState === 'MENU' && this.currentMenu) {
             this.currentMenu.update(deltaTime)
-            this.inputHandler.keys.clear() // Rensa keys så de inte läcker till spelet
-            this.gameObjects.filter(o => !o.markedForDeletion)
-            return
+            this.inputHandler.keys.clear()
             return true
         }
 
@@ -176,40 +271,9 @@ export default class Game {
             return true
         }
 
-        // Kolla restart input
-        // if (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) {
-        //     if (this.gameState === 'GAME_OVER' || this.gameState === 'WIN') {
-        //         this.restart()
-        //         return
-        //     }
-        // }
-
-        // Uppdatera bara om spelet är i PLAYING state
-        // if (this.gameState !== 'PLAYING') return
-
-        // // Uppdatera alla spelobjekt
-        // this.gameObjects.forEach(obj => obj.update(deltaTime))
-
-        // // Uppdatera plattformar (även om de är statiska)
-        // this.platforms.forEach(platform => platform.update(deltaTime))
-
-        // // Uppdatera mynt
-        // this.coins.forEach(coin => coin.update(deltaTime))
-
-        // // Uppdatera fiender
-        // this.enemies.forEach(enemy => enemy.update(deltaTime))
-
-        // this.Spikes.forEach(spike => spike.update(deltaTime))
-
-        // // Uppdatera spelaren
-        // this.player.update(deltaTime)
-
-
-
-
         if (
             (this.inputHandler.keys.has('r') || this.inputHandler.keys.has('R')) &&
-            (this.gameState === 'GAME_OVER' || this.gameState === 'WIN')
+            (this.gameState === 'WIN')
         ) {
             this.restart()
             return true
@@ -218,17 +282,30 @@ export default class Game {
         return false
     }
 
+    isPlaying() {
+        return this.gameState === 'PLAYING'
+    }
+
     updateEntites(deltaTime) {
         // this.platforms.forEach(p => p.update(deltaTime))
         // this.coins.forEach(c => c.update(deltaTime))
         // this.enemies.forEach(e => e.update(deltaTime))
-        // this.projectiles.forEach(p => p.update(deltaTime))
+        this.projectiles.forEach(p => p.update(deltaTime))
         this.player.update(deltaTime)
+
+        // Uppdatera dart shooters
+        if (this.currentLevel && this.currentLevel.dartShooters) {
+            this.currentLevel.dartShooters.forEach(shooter => {
+                shooter.update(deltaTime)
+            })
+        }
     }
+
     cleanup() {
         this.coins = this.coins.filter(c => !c.markedForDeletion)
         this.enemies = this.enemies.filter(e => !e.markedForDeletion)
         this.projectiles = this.projectiles.filter(p => !p.markedForDeletion)
+        this.gameObjects = this.gameObjects.filter(obj => !obj.markedForDeletion)
 
         if (this.player.x < 0) this.player.x = 0
         if (this.player.x + this.player.width > this.worldWidth) {
@@ -240,6 +317,8 @@ export default class Game {
 
     // Antag att spelaren inte står på marken, tills vi hittar en kollision
     handleCollisions() {
+        if (this.isLevelTransitioning) return
+
         this.player.isGrounded = false
 
         this.deathZones.forEach(zone => {
@@ -315,6 +394,26 @@ export default class Game {
             }
         })
 
+        // Level 3: Kolla kollision med dödlig vägg
+        if (this.currentLevelIndex === 2 && this.currentLevel.deathWall) {
+            if (this.player.intersects(this.currentLevel.deathWall)) {
+                this.player.health = 0
+            }
+        }
+
+        // Kolla om projektiler från dart shooters träffar spelaren
+        if (this.currentLevel && this.currentLevel.dartShooters) {
+            this.projectiles.forEach(projectile => {
+                this.currentLevel.dartShooters.forEach(shooter => {
+                    // Kolla om denna projektil kommer från en dart shooter
+                    // (vi antar att alla projektiler från dart shooters är "farliga")
+                    if (this.player.intersects(projectile)) {
+                        this.player.health = 0
+                    }
+                })
+            })
+        }
+
         // Uppdatera projektiler
         this.projectiles.forEach(projectile => {
             this.enemies.forEach(enemy => {
@@ -337,6 +436,23 @@ export default class Game {
                     })
                 }
             })
+        })
+
+        // Hantera boxkollisioner
+        this.gameObjects.forEach(box => {
+            if (!box.isBox) return
+
+            // Om spelaren är tillräckligt nära lådan, markera den för borttagning
+            const distance = Math.hypot(
+                (box.x + box.width / 2) - (this.player.x + this.player.width / 2),
+                (box.y + box.height / 2) - (this.player.y + this.player.height / 2)
+            )
+
+            const triggerDistance = 100 // pixels - ändra detta för att justera när lådan försvinner
+
+            if (distance < triggerDistance) {
+                box.markedForDeletion = true
+            }
         })
 
         this.gameObjects.forEach(obj => {
@@ -366,15 +482,19 @@ export default class Game {
         }
     }
 
-    canPlant() {
+    canWaterPlant() {
         return (
             this.gameState === 'PLAYING' &&
-            !this.plant &&
+            this.plant &&
+            !this.plant.isWatered && // bara om den inte redan växer
             this.playerInLevelEndZone() &&
             this.player.isGrounded &&
             (this.inputHandler.keys.has('e') || this.inputHandler.keys.has('E'))
         )
     }
+
+
+
 
     spawnPlant() {
         const plantSize = 64 // frame size
@@ -388,22 +508,57 @@ export default class Game {
         this.gameStateExtra = 'WATERING'
     }
 
-    updatePlant(deltaTime) {
-        this.plant.update(deltaTime)
+    startLevelTransition() {
+        this.isLevelTransitioning = true
+        this.gameStateExtra = null // ta bort watering
 
-        if (this.plant.isFullyGrown) {
-            this.gameStateExtra = null
+        const maxRadius = Math.sqrt(Math.pow(this.width, 2) + Math.pow(this.height, 2)) / 2
+        this.transitionCircleRadius = maxRadius
+
+        this.player.startClimbing()
+    }
+
+    handleLevelTransition(deltaTime) {
+        const plantCenterX = this.plant.x + this.plant.width / 2 - (this.player.width / 2)
+        const lerpSpeed = 0.05
+
+        this.player.x += (plantCenterX - this.player.x) * lerpSpeed
+
+        const climbSpeed = 0.15
+        this.player.y -= climbSpeed * deltaTime
+
+        const shrinkSpeed = 0.4
+        this.transitionCircleRadius -= shrinkSpeed * deltaTime
+
+        // om cirkel helt stängd, då byts level
+        if (this.transitionCircleRadius <= 0) {
             this.currentLevelIndex++
-
             if (this.currentLevelIndex >= this.levels.length) {
-                this.gameState = 'WIN' // eller 'MENU' om du vill återgå till menyn
+                this.gameState = 'WIN'
                 return
             }
-
             this.loadLevel(this.currentLevelIndex)
-            return
         }
     }
+
+    updatePlant(deltaTime) {
+        if (!this.plant) return
+
+        this.plant.update(deltaTime)
+
+        // ändrat
+        if (this.plant.isFullyGrown && !this.isLevelTransitioning) {
+            this.startLevelTransition()
+        }
+    }
+
+    plantStartsGrowing() {
+        if (this.plant) {
+            this.plant.water()
+            this.gameStateExtra = 'GROWING'
+        }
+    }
+
 
     handlePlanting(deltaTime) {
         if (!this.plant && this.canPlant()) {
@@ -420,16 +575,46 @@ export default class Game {
         // if (!this.isPlaying()) return
 
         this.handleDebugInput()
+        this.handleMusicInput()
         this.handlePlanting(deltaTime)
         this.updateEntites(deltaTime)
         this.handleCollisions()
+
+        if (this.isLevelTransitioning) {
+            this.handleLevelTransition(deltaTime)
+            this.player.update(deltaTime) // uppdatera spelaren under transition
+            this.updateCamera(deltaTime)
+            return
+        }
+
+
+        // Level 3 special: Kolla om end zonen ska teleporteras och uppdatera dödlig vägg
+        // console.log('Current level index:', this.currentLevelIndex) // DEBUG
+        if (this.currentLevelIndex === 2 && this.currentLevel && this.currentLevel.checkEndZoneTeleport) {
+            console.log('Calling checkEndZoneTeleport') // DEBUG
+            this.currentLevel.checkEndZoneTeleport()
+            // Uppdatera dödlig vägg
+            if (this.currentLevel.updateDeathWall) {
+                this.currentLevel.updateDeathWall(deltaTime)
+            }
+        }
+
         this.cleanup()
         this.updateCamera(deltaTime)
         this.checkGameState()
 
     }
 
+
     draw(ctx) {
+
+        if (this.bgMusic.muted) {
+            ctx.save()
+            ctx.fillStyle = 'red'
+            ctx.font = 'bold 20px Arial'
+            ctx.fillText('MUTED', this.width - 80, 30)
+            ctx.restore()
+        }
         // debug tool för end zone
         if (this.debug && this.levelEndZone) {
             ctx.save()
@@ -472,12 +657,29 @@ export default class Game {
             }
         })
 
+
+
+        this.fakespikes.forEach(fakespike => {
+            if (this.camera.isVisible(fakespike)) {
+                fakespike.draw(ctx, this.camera)
+            }
+        })
+
         // Rita projektiler med camera offset
         this.projectiles.forEach(projectile => {
             if (this.camera.isVisible(projectile)) {
                 projectile.draw(ctx, this.camera)
             }
         })
+
+        // Rita dart shooters med camera offset
+        if (this.currentLevel && this.currentLevel.dartShooters) {
+            this.currentLevel.dartShooters.forEach(shooter => {
+                if (this.camera.isVisible(shooter)) {
+                    shooter.draw(ctx, this.camera)
+                }
+            })
+        }
 
         // Rita andra spelobjekt med camera offset
         this.gameObjects.forEach(obj => {
@@ -486,7 +688,7 @@ export default class Game {
             }
         })
 
-        if (this.playerInLevelEndZone() && !this.plant) {
+        if (this.playerInLevelEndZone() && this.plant && !this.plant.isWatered) {
             ctx.fillStyle = 'white'
             ctx.font = '16px Arial'
             ctx.fillText(
@@ -510,16 +712,81 @@ export default class Game {
         // Rita spelaren med camera offset
         this.player.draw(ctx, this.camera)
 
+        if (this.debug) {
+            ctx.save()
+            ctx.strokeStyle = 'lime'
+            ctx.lineWidth = 1
+
+            const drawDebugRect = (obj) => {
+                const sx = obj.x - this.camera.x
+                const sy = obj.y - this.camera.y
+                ctx.strokeRect(sx, sy, obj.width, obj.height)
+            }
+
+            this.platforms.forEach(drawDebugRect)
+            this.enemies.forEach(drawDebugRect)
+            this.coins.forEach(drawDebugRect)
+            this.deathZones.forEach(drawDebugRect)
+            this.spikes.forEach(drawDebugRect)
+
+            ctx.strokeStyle = 'magenta'
+            drawDebugRect(this.player)
+
+            ctx.restore()
+        }
+
         // Rita UI sist (utan camera offset - alltid synligt)
         this.ui.draw(ctx)
+
+
 
         // Rita meny överst om den är aktiv
         if (this.currentMenu) {
             this.currentMenu.draw(ctx)
+        
+        if (this.isLevelTransitioning) {
+            const playerScreen = this.camera.worldToScreen(
+                this.player.x + this.player.width / 2,
+                this.player.y + this.player.height / 2
+            )
+            
+            ctx.save()
+            ctx.fillStyle = 'black'
+
+            ctx.beginPath()
+
+            ctx.rect(0, 0, this.width, this.height)
+            ctx.arc(
+                playerScreen.x,
+                playerScreen.y,
+                Math.max(this.transitionCircleRadius),
+                0,
+                Math.PI * 2,
+                true
+            )
+            ctx.fill()
+            ctx.restore()
         }
     }
+
+    if (this.gameHasStarted) {
+        this.ui.draw(ctx)
+    }
+
+    if (this.currentMenu) {
+        this.currentMenu.draw(ctx)
+    }
+
+
+
+
+
+
+
+
+
+
+
+        }
+    
 }
-
-
-
-

@@ -6,7 +6,7 @@ import Rectangle from '../Rectangle.js'
 import Fakespikes from '../fakespike.js'  // Ändrat till stort F
 import Box from '../Box.js'
 import DeathZone from '../DeathZone.js'
-export default class Level1 extends Level {
+export default class Level4 extends Level {
     createPlatforms() {
         const h = this.game.height
         this.platforms.push(

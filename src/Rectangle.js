@@ -14,17 +14,8 @@ export default class Rectangle extends GameObject {
     }
 
     update(deltaTime) {
-        // Flytta baserat på hastighet
-        this.x += this.velocityX * deltaTime
-        this.y += this.velocityY * deltaTime
-
-        // Studsa mot väggarna
-        if (this.x < 0 || this.x + this.width > this.game.width) {
-            this.velocityX = -this.velocityX * this.bounce  // Byt X-riktning
-        }
-        if (this.y < 0 || this.y + this.height > this.game.height) {
-            this.velocityY = -this.velocityY * this.bounce  // Byt Y-riktning
-        }
+        // Boxar uppdateras inte - de är stationära
+        // De försvinner när spelaren kommer tillräckligt nära (hanteras i Game.js)
     }
 
     draw(ctx, camera = null) {
@@ -33,5 +24,37 @@ export default class Rectangle extends GameObject {
         const screenY = camera ? this.y - camera.y : this.y
         ctx.fillStyle = this.color
         ctx.fillRect(screenX, screenY, this.width, this.height)
+    }
+
+    // Hantera kollision med plattformar (samma som Player)
+    handlePlatformCollision(platform) {
+        if (!this.intersects(platform)) return
+
+        // Beräkna överlappen i alla riktningar
+        const overlapLeft = (this.x + this.width) - platform.x
+        const overlapRight = (platform.x + platform.width) - this.x
+        const overlapTop = (this.y + this.height) - platform.y
+        const overlapBottom = (platform.y + platform.height) - this.y
+
+        // Hitta minsta överlapning
+        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom)
+
+        if (minOverlap === overlapTop && this.velocityY >= 0) {
+            // Faller ner på plattformen
+            this.y = platform.y - this.height
+            this.velocityY = 0
+        } else if (minOverlap === overlapBottom && this.velocityY < 0) {
+            // Slår huvudet på plattformen
+            this.y = platform.y + platform.height
+            this.velocityY = 0
+        } else if (minOverlap === overlapLeft && this.velocityX > 0) {
+            // Kolliderar från vänster
+            this.x = platform.x - this.width
+            this.velocityX = -this.velocityX * this.bounce
+        } else if (minOverlap === overlapRight && this.velocityX < 0) {
+            // Kolliderar från höger
+            this.x = platform.x + platform.width
+            this.velocityX = -this.velocityX * this.bounce
+        }
     }
 }

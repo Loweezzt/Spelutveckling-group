@@ -1,0 +1,41 @@
+import Level from './Level.js'
+import Platform from '../Platform.js'
+import Coin from '../Coin.js'
+import Spikes from '../spike.js'
+
+export default class Level1 extends Level {
+    createPlatforms() {
+        const h = this.game.height
+        this.platforms.push(
+            new Platform(this.game, 0, h - 80, 1500, 300, '#654321'),
+            
+        )
+    }
+    
+    createSpikes() {
+        const h = this.game.height
+        this.spikes = [
+            new Spikes(this.game, 700, h - 91, 28, 10),  
+            new Spikes(this.game, 850, h - 91, 28, 10), 
+        ]
+    }
+    
+    createCoins() {
+        this.coins.push(
+            new Coin(this.game, 300, this.game.height - 200)
+        )
+    }
+    
+    createEnemies() {
+        // tom just nu
+    }
+    
+    createEndZone() {
+        this.levelEndZone = {
+            x: 1500,
+            y: this.game.height - 140,
+            width: 100,
+            height: 60
+        }
+    }
+}

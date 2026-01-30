@@ -6,9 +6,18 @@ export default class Level {
         this.coins = []
         this.enemies = []
         this.deathZones = []
-
-        this.playerSpawn = {x: 50, y: 200}
+        this.spikes = []
+        this.rectangles = []
+        this.fakespikes = []
+        this.boxes = []
+        this.dartShooters = []
+        this.levelEndZone = { x: 0, y: 0, width: 0, height: 0 }
+        this.playerSpawn = { x: 50, y: 200 }
     }
+
+
+
+
 
     init() {
         this.createPlatforms()
@@ -16,14 +25,24 @@ export default class Level {
         this.createEnemies()
         this.createEndZone()
         this.createDeathZones()
-
+        this.createSpikes()
+        this.createRectangles()
+        this.createFakespikes()
+        this.createBoxes()
+        this.createDartShooters()
     }
 
-    createPlatforms() {}
-    createCoins() {}
-    createEnemies() {}
-    createEndZone() {}
-    createDeathZones() {}
+    createPlatforms() { }
+    createCoins() { }
+    createEnemies() { }
+    createEndZone() { }
+    createDeathZones() { }
+    createSpikes() { }
+    createRectangles() { }
+    createFakespikes() { }
+    createBoxes() { }
+    createDartShooters() { }
+
 
     getData() {
         return {
@@ -32,7 +51,11 @@ export default class Level {
             enemies: this.enemies,
             deathZones: this.deathZones,
             playerSpawn: this.playerSpawn,
-            levelEndZone: this.levelEndZone
+            levelEndZone: this.levelEndZone,
+            spikes: this.spikes,
+            rectangles: this.rectangles,
+            fakespikes: this.fakespikes,
+            boxes: this.boxes,
         }
     }
 }

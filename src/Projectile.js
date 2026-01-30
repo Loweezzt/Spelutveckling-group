@@ -6,7 +6,7 @@ export default class Projectile extends GameObject {
         this.directionX = directionX // -1 för vänster, 1 för höger
         this.speed = 0.5 // pixels per millisekund
         this.startX = x // Spara startposition
-        this.maxDistance = 800 // Max en skärm långt
+        this.maxDistance = 1000 // Max en skärm långt
         this.color = 'orange'
     }
     

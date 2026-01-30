@@ -1,222 +1,220 @@
 import GameObject from './GameObject.js'
-import idleSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Idle (32x32).png'
-import runSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Run (32x32).png'
-import jumpSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Jump (32x32).png'
-import fallSprite from './assets/Pixel Adventure 1/Main Characters/Ninja Frog/Fall (32x32).png'
+import idleSprite from './assets/Idle_320x32.png'
+import runSprite from './assets/Running_320x32.png'
+import deadSprite from './assets/Dying_432x32.png'
+import jumpSprite from './assets/Jumping3.png'
+import climbSprite from './assets/Climbing_320x34.png'
+import waterSprite from './assets/Watering_192x32.png'
+
+// nytt
+import jumpSfx from './assets/jump.mp3'
+import deathSfx from './assets/death.mp3'
 
 export default class Player extends GameObject {
     constructor(game, x, y, width, height, color) {
         super(game, x, y, width, height)
         this.color = color
         
-        // Nuvarande hastighet (pixels per millisekund)
+        // hastighet
         this.velocityX = 0
         this.velocityY = 0
 
-        // Rörelsehastighet (hur snabbt spelaren accelererar/rör sig)
+        // rörelse
         this.moveSpeed = 0.3
         this.directionX = 0
         this.directionY = 0
+        this.lastDirectionX = 1
 
-        // Fysik egenskaper
-        this.jumpPower = -0.7 // negativ hastighet för att hoppa uppåt
-        this.isGrounded = false // om spelaren står på marken
+        // fysik
+        this.jumpPower = -0.7 
+        this.isGrounded = false 
+        this.isClimbing = false
+        // nytt
+        this.isLanding = false
+        this.wasGrounded = false
+        this.isWatering = false
+        this.jumpStarted = false // flagga för att spåra om hopp-animationen redan spelats
         
-        // Health system
         this.maxHealth = 1
         this.health = this.maxHealth
-        this.invulnerable = false // Immun mot skada efter att ha blivit träffad
-        this.invulnerableTimer = 0
-        this.invulnerableDuration = 1000 // 1 sekund i millisekunder
-        
-        // Shooting system
-        this.canShoot = true
-        this.shootCooldown = 300 // millisekunder mellan skott
-        this.shootCooldownTimer = 0
-        this.lastDirectionX = 1 // Kom ihåg senaste riktningen för skjutning
-        
-        // Sprite animation system - ladda sprites med olika hastigheter
-        this.loadSprite('idle', idleSprite, 11, 150)  // Långsammare idle
-        this.loadSprite('run', runSprite, 12, 80)     // Snabbare spring
-        this.loadSprite('jump', jumpSprite, 1)
-        this.loadSprite('fall', fallSprite, 1)
+
+        // nytt - sfx
+        this.jumpAudio = new Audio(jumpSfx)
+        this.deathAudio = new Audio(deathSfx)
+        this.jumpAudio.volume = 0.5 // kan ändras
+        this.deathAudio.volume = 0.5 // kan ändras
+
+
+        this.loadSprite('idle', idleSprite, 10, 0, 9, 200)
+        this.loadSprite('run', runSprite, 10, 0, 9, 100)
+        this.loadSprite('dead', deadSprite, 9, 0, 9, 80)
+        this.loadSprite('jump', jumpSprite, 14, 0, 5, 100)
+        this.loadSprite('fall', jumpSprite, 14, 6, 8, 100) 
+        // nytt
+        this.loadSprite('climb', climbSprite, 10, 0, 10, 100) 
+        this.loadSprite('land', jumpSprite, 14, 9, 13, 60) 
+        this.loadSprite('water', waterSprite, 6, 0, 5, 150)
         
         this.currentAnimation = 'idle'
+
+        this.onAnimationComplete = (animationName) => {
+            if (animationName === 'dead') {
+                this.game.restart()
+            }
+            
+            // nytt
+            if (animationName === 'land') {
+                this.isLanding = false
+            }
+
+            if (animationName === 'water') {
+                this.isWatering = false
+                this.setAnimation('idle')
+                this.game.plantStartsGrowing()
+            }
+        }
+    }
+
+    // nytt
+    startWatering() {
+        this.isWatering = true
+        this.velocityX = 0
+        this.velocityY = 0
+        this.setAnimation('water')
+    }
+
+    // nytt
+    startClimbing() {
+        this.isClimbing = true
+        this.velocityX = 0
+        this.velocityY = 0
+        this.setAnimation('climb')
+    }
+
+    // nytt
+    playSound(audio) {
+        audio.currentTime = 0
+        audio.play().catch(e => console.log(e))
     }
 
     update(deltaTime) {
-        // Horisontell rörelse
-        if (this.game.inputHandler.keys.has('ArrowLeft') && this.health > 0) {
+        this.wasGrounded = this.isGrounded // nytt
+        if (this.health <= 0) {
+            this.setAnimation('dead')
+            this.updateAnimation(deltaTime)
+            // väntar på att onAnimationComplete ska trigga restart
+            return 
+        }
+
+        // nytt
+        if (this.isWatering || this.game.gameStateExtra === 'GROWING') {
+            this.updateAnimation(deltaTime)
+            return
+        }
+
+        if (this.isClimbing) {
+            this.updateAnimation(deltaTime)
+            return
+        }
+
+        if (this.game.inputHandler.keys.has('ArrowLeft')) {
             this.velocityX = -this.moveSpeed
             this.directionX = -1
-            this.lastDirectionX = -1 // Spara riktning
-            
-        } else if (this.game.inputHandler.keys.has('ArrowRight') && this.health > 0) {
+            this.lastDirectionX = -1 
+        } else if (this.game.inputHandler.keys.has('ArrowRight')) {
             this.velocityX = this.moveSpeed
             this.directionX = 1
-            this.lastDirectionX = 1 // Spara riktning
+            this.lastDirectionX = 1
         } else {
             this.velocityX = 0
             this.directionX = 0
         }
 
-        // Hopp - endast om spelaren är på marken
-        if (this.game.inputHandler.keys.has(' ') && this.isGrounded && this.health > 0) {
+        if (this.game.inputHandler.keys.has(' ') && this.isGrounded) {
             this.velocityY = this.jumpPower
             this.isGrounded = false
+            this.jumpStarted = false // resetta jumpStarted när vi hoppar
+            // nytt
+            this.playSound(this.jumpAudio)
         }
 
-        // Applicera gravitation
         this.velocityY += this.game.gravity * deltaTime
         
-        // Applicera luftmotstånd (friktion)
         if (this.velocityY > 0) {
             this.velocityY -= this.game.friction * deltaTime
             if (this.velocityY < 0) this.velocityY = 0
         }
 
-        // Sätt directionY baserat på vertikal hastighet för ögonrörelse
-        if (this.velocityY < -0.1) {
-            this.directionY = -1 // tittar upp när man hoppar
-        } else if (this.velocityY > 0.1) {
-            this.directionY = 1 // tittar ner när man faller
-        } else {
-            this.directionY = 0
-        }
-
-        // Uppdatera position baserat på hastighet
         this.x += this.velocityX * deltaTime
         this.y += this.velocityY * deltaTime
         
-        // Uppdatera animation state baserat på rörelse
-        if (!this.isGrounded && this.velocityY < 0) {
-            this.setAnimation('jump')
-        } else if (!this.isGrounded && this.velocityY > 0) {
-            this.setAnimation('fall')
-        } else if (this.velocityX !== 0) {
+        // nytt
+        if (!this.isGrounded) {
+            this.isLanding = false // Om vi faller av en kant ska vi inte landa
+            if (this.velocityY < 0) {
+                // Spela jump-animation bara en gång
+                if (!this.jumpStarted) {
+                    this.setAnimation('jump') // frames 0-5
+                    this.jumpStarted = true
+                }
+            } else {
+                this.setAnimation('fall') // frames 6-8
+            }
+        } 
+        else if (this.isLanding) {
+            this.setAnimation('land') // frames 9-13
+        }
+        else if (this.velocityX !== 0) {
             this.setAnimation('run')
-        } else {
+        } 
+        else {
             this.setAnimation('idle')
         }
         
-        // Uppdatera animation frame
         this.updateAnimation(deltaTime)
-        
-        // Uppdatera invulnerability timer
-        if (this.invulnerable) {
-            this.invulnerableTimer -= deltaTime
-            if (this.invulnerableTimer <= 0) {
-                this.invulnerable = false
-            }
-        }
-        
-        // Uppdatera shoot cooldown
-        if (!this.canShoot) {
-            this.shootCooldownTimer -= deltaTime
-            if (this.shootCooldownTimer <= 0) {
-                this.canShoot = true
-            }
-        }
-        
-        // Skjut med X-tangenten
-        if ((this.game.inputHandler.keys.has('x') || this.game.inputHandler.keys.has('X')) && this.canShoot) {
-            this.shoot()
-        }
     }
     
-    shoot() {
-        // Skjut i senaste riktningen spelaren rörde sig
-        const projectileX = this.x + this.width / 2
-        const projectileY = this.y + this.height / 2
-        
-        this.game.addProjectile(projectileX, projectileY, this.lastDirectionX)
-        
-        // Sätt cooldown
-        this.canShoot = false
-        this.shootCooldownTimer = this.shootCooldown
-    }
-    
+    // döda spelaren direkt
     takeDamage(amount) {
-        if (this.invulnerable) return
-        
-        this.health -= amount
-        if (this.health < 0) this.health = 0
-        
-        // Sätt invulnerability efter att ha tagit skada
-        this.invulnerable = true
-        this.invulnerableTimer = this.invulnerableDuration
+        // nytt
+        if (this.health > 0) {
+            this.playSound(this.deathAudio)
+        }
+        this.health = 0
     }
     
+    // nytt, använde mig av en annan version så loading sprites ska funka.
     handlePlatformCollision(platform) {
         const collision = this.getCollisionData(platform)
-        
         if (collision) {
             if (collision.direction === 'top' && this.velocityY > 0) {
-                // Kollision från ovan - spelaren landar på plattformen
+                if (!this.wasGrounded) {
+                    this.isLanding = true
+                    // kanske spela upp ett "duns"-ljud här
+                }
+
                 this.y = platform.y - this.height
                 this.velocityY = 0
                 this.isGrounded = true
             } else if (collision.direction === 'bottom' && this.velocityY < 0) {
-                // Kollision från nedan - spelaren träffar huvudet
                 this.y = platform.y + platform.height
                 this.velocityY = 0
             } else if (collision.direction === 'left' && this.velocityX > 0) {
-                // Kollision från vänster
                 this.x = platform.x - this.width
             } else if (collision.direction === 'right' && this.velocityX < 0) {
-                // Kollision från höger
                 this.x = platform.x + platform.width
             }
         }
     }
 
     draw(ctx, camera = null) {
-        // Blinka när spelaren är invulnerable
-        if (this.invulnerable) {
-            const blinkSpeed = 100 // millisekunder per blink
-            if (Math.floor(this.invulnerableTimer / blinkSpeed) % 2 === 0) {
-                return // Skippa rendering denna frame för blink-effekt
-            }
-        }
-        
-        // Beräkna screen position (om camera finns)
-        const screenX = camera ? this.x - camera.x : this.x
-        const screenY = camera ? this.y - camera.y : this.y
-        
-        // Försök rita sprite, annars fallback till rektangel
         const spriteDrawn = this.drawSprite(ctx, camera, this.lastDirectionX === -1)
         
         if (!spriteDrawn) {
-            // Fallback: Rita spelaren som en rektangel
+            const screenX = camera ? this.x - camera.x : this.x
+            const screenY = camera ? this.y - camera.y : this.y
             ctx.fillStyle = this.color
             ctx.fillRect(screenX, screenY, this.width, this.height)
-
-            // Rita ögon
-            ctx.fillStyle = 'white'
-            ctx.fillRect(screenX + this.width * 0.2, screenY + this.height * 0.2, this.width * 0.2, this.height * 0.2)
-            ctx.fillRect(screenX + this.width * 0.6, screenY + this.height * 0.2, this.width * 0.2, this.height * 0.2)
-            
-            // Rita pupiller
-            ctx.fillStyle = 'black'
-            ctx.fillRect(
-                screenX + this.width * 0.25 + this.directionX * this.width * 0.05, 
-                screenY + this.height * 0.25 + this.directionY * this.width * 0.05, 
-                this.width * 0.1, 
-                this.height * 0.1
-            )
-            ctx.fillRect(
-                screenX + this.width * 0.65 + this.directionX * this.width * 0.05, 
-                screenY + this.height * 0.25 + this.directionY * this.width * 0.05, 
-                this.width * 0.1, 
-                this.height * 0.1
-            )
-            // rita mun som ett streck
-            ctx.strokeStyle = 'black'
-            ctx.lineWidth = 2
-            ctx.beginPath()
-            ctx.moveTo(screenX + this.width * 0.3, screenY + this.height * 0.65)
-            ctx.lineTo(screenX + this.width * 0.7, screenY + this.height * 0.65)
-            ctx.stroke()
         }
     }
 }
