@@ -3,6 +3,7 @@ import plantSpriteImage from './assets/Pixel Adventure 1/Other/plant_grow.png'
 
 export default class Plant extends GameObject {
     constructor(game, x, y, size = 64) {
+        // Justera startpositionen så den börjar nere vid marken
         super(game, x, y - size, size, size) 
         
         this.frameWidth = 64
@@ -12,7 +13,7 @@ export default class Plant extends GameObject {
         this.image.src = plantSpriteImage
         
         this.overlap = 14 
-        this.growthSpeed = 80 
+        this.growthSpeed = 150
         
         this.growthState = 0 
         this.currentSegmentHeight = 0 
@@ -34,6 +35,11 @@ export default class Plant extends GameObject {
         this.isPotFinished = false
 
         this.isWatered = false
+
+        // --- HÄR ÄNDRAR DU HÖJDEN ---
+        // Hur många delar ska plantan bestå av totalt?
+        // (Pot + Stammar + Huvud). Originalet var typ 4.
+        this.maxSegments = 9 
     }
 
     water() {
@@ -45,6 +51,7 @@ export default class Plant extends GameObject {
 
         this.frameTimer += deltaTime
 
+        // 1. Kör kruk-animationen först
         if (!this.isPotFinished) {
             if (this.frameTimer > this.frameInterval) {
                 if (this.potFrameIndex < this.potMaxFrame) {
@@ -52,30 +59,37 @@ export default class Plant extends GameObject {
                     this.frameTimer = 0
                 } else {
                     this.isPotFinished = true
-                    this.growthState = 1 
+                    this.growthState = 1 // Nu börjar första stammen växa
                     this.currentSegmentHeight = 0 
                 }
             }
         } 
         
+        // 2. Väx stammen och huvudet
         else if (!this.isFullyGrown) {
             this.currentSegmentHeight += this.growthSpeed * (deltaTime / 1000)
 
+            // När en del är fullvuxen (64px)
             if (this.currentSegmentHeight >= 64) {
                 this.currentSegmentHeight = 0 
-                this.growthState++ 
+                this.growthState++ // Gå vidare till nästa del
                 
-                if (this.growthState > 3) {
-                    this.growthState = 3 
+                // Om vi har nått maxantalet delar (minus 1 eftersom vi börjar på 0/1)
+                if (this.growthState >= this.maxSegments) {
+                    this.growthState = this.maxSegments - 1
                     this.isFullyGrown = true
 
-                    const totalHeight = (this.width * 4) - (this.overlap * 3)
+                    // Uppdatera hitboxen för hela plantan
+                    const totalHeight = (this.width * this.maxSegments) - (this.overlap * (this.maxSegments - 1))
+                    
+                    // Flytta Y uppåt så basen står kvar på marken
                     this.y = this.y + this.height - totalHeight
                     this.height = totalHeight
                 }
             }
         }
 
+        // 3. Animera huvudet när det är klart
         if (this.isFullyGrown) {
             if (this.frameTimer > this.frameInterval + 100) {
                 this.headFrameIndex++
@@ -103,6 +117,7 @@ export default class Plant extends GameObject {
         const sourceX = col * this.frameWidth
         const sourceY = row * this.frameHeight
         
+        // Rita nerifrån och upp
         const drawY = y + (64 - height)
 
         ctx.drawImage(
@@ -116,8 +131,10 @@ export default class Plant extends GameObject {
         let baseX = this.x
         let baseY = this.y
         
+        // Om den är fullvuxen har vi ändrat this.y och this.height i update(),
+        // så vi måste räkna "botten" baserat på det.
         if (this.isFullyGrown) {
-            baseY = this.y + this.height - this.width
+            baseY = this.y + this.height - 64 // 64 är bas-storleken
         } 
         
         const drawX = camera ? baseX - camera.x : baseX
@@ -127,24 +144,36 @@ export default class Plant extends GameObject {
         const stepUp = size - this.overlap
 
         if (this.image && this.image.complete) {
+            // 1. Rita alltid krukan (botten)
             this.drawFrame(ctx, this.potFrameIndex, drawX, drawY)
 
-            if (this.growthState > 1) { 
-                this.drawFrame(ctx, this.middleFrame, drawX, drawY - stepUp)
-            } else if (this.growthState === 1) {
-                this.drawGrowingFrame(ctx, this.middleFrame, drawX, drawY - stepUp, this.currentSegmentHeight)
-            }
+            // 2. Loopa igenom alla delar som växer
+            // Vi börjar på 1 eftersom 0 är krukan
+            for (let i = 1; i <= this.growthState; i++) {
+                
+                // Räkna ut Y-positionen för denna del
+                // Varje del hamnar "stepUp" pixlar högre upp än den förra
+                const currentY = drawY - (stepUp * i)
 
-            if (this.growthState > 2) {
-                this.drawFrame(ctx, this.upperStemFrame, drawX, drawY - (stepUp * 2))
-            } else if (this.growthState === 2) {
-                this.drawGrowingFrame(ctx, this.upperStemFrame, drawX, drawY - (stepUp * 2), this.currentSegmentHeight)
-            }
+                let frameToUse = this.middleFrame // Standard är "mitten-stam"
 
-            if (this.isFullyGrown) {
-                this.drawFrame(ctx, this.headFrameIndex, drawX, drawY - (stepUp * 3))
-            } else if (this.growthState === 3) {
-                this.drawGrowingFrame(ctx, this.headFrameIndex, drawX, drawY - (stepUp * 3), this.currentSegmentHeight)
+                // Om det är sista delen -> Det är HUVUDET
+                if (i === this.maxSegments - 1) {
+                    frameToUse = this.headFrameIndex
+                } 
+                // Om det är näst sista delen -> Det är ÖVRE STAM (övergången)
+                else if (i === this.maxSegments - 2) {
+                    frameToUse = this.upperStemFrame
+                }
+
+                // Kolla om denna del håller på att växa eller är klar
+                if (i < this.growthState) {
+                    // Denna del är helt klar -> Rita hela (64px)
+                    this.drawFrame(ctx, frameToUse, drawX, currentY)
+                } else {
+                    // Denna del växer fortfarande -> Rita bara currentSegmentHeight
+                    this.drawGrowingFrame(ctx, frameToUse, drawX, currentY, this.currentSegmentHeight)
+                }
             }
         }
     }

@@ -8,6 +8,11 @@ export default class Level {
         this.deathZones = []
         this.spikes = []
 
+        // nytt
+        this.fakespikes = []
+        this.boxes = []
+        this.dartShooters = []
+
         this.playerSpawn = {x: 50, y: 200}
     }
 
@@ -18,6 +23,10 @@ export default class Level {
         this.createSpikes()
         this.createEndZone()
         this.createDeathZones()
+        // nytt
+        this.createFakespikes()
+        this.createBoxes()
+        this.createDartShooters()
 
     }
 
@@ -27,6 +36,11 @@ export default class Level {
     createSpikes() {}
     createEndZone() {}
     createDeathZones() {}
+    // nytt
+    createFakespikes() {}
+    createBoxes() {}
+    createDartShooters() {}
+    
 
     getData() {
         return {
@@ -36,7 +50,11 @@ export default class Level {
             deathZones: this.deathZones,
             spikes: this.spikes,
             playerSpawn: this.playerSpawn,
-            levelEndZone: this.levelEndZone
+            levelEndZone: this.levelEndZone,
+            // nytt
+            fakespikes: this.fakespikes,
+            boxes: this.boxes,
+            dartShooters: this.dartShooters
         }
     }
 }

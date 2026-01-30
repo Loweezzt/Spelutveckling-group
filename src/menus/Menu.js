@@ -47,19 +47,12 @@ export default class Menu {
         const keys = this.game.inputHandler.keys
         const mouse = this.game.mouse
 
-        // --- NYTT: MUS-LOGIK ---
-        // Vi kollar om musen hovrar över något alternativ
         if (mouse) {
             this.options.forEach((option, index) => {
-                // Hoppa över om det inte är ett klickbart val (t.ex. bara text)
                 if (!option.action && !option.key) return
 
-                // Beräkna positionen för detta alternativ (samma logik som i draw)
                 const centerX = this.game.width / 2
                 const y = this.layout.startY + index * this.layout.lineHeight
-                
-                // Definiera en "hitbox" (en osynlig rektangel runt texten)
-                // 
                 const hitBox = {
                     left: centerX - (this.layout.hitBoxWidth / 2),
                     right: centerX + (this.layout.hitBoxWidth / 2),
@@ -67,17 +60,14 @@ export default class Menu {
                     bottom: y + (this.layout.hitBoxHeight / 2)
                 }
 
-                // Kolla om musen är innanför hitboxen
                 if (mouse.x >= hitBox.left && mouse.x <= hitBox.right &&
                     mouse.y >= hitBox.top && mouse.y <= hitBox.bottom) {
                     
-                    // Sätt detta alternativ till valt
                     this.selectedIndex = index
 
-                    // Om musen är klickad, kör action
                     if (mouse.clicked && option.action) {
                         option.action()
-                        mouse.clicked = false // "Förbruka" klicket så det inte händer igen direkt
+                        mouse.clicked = false 
                     }
                 }
             })
