@@ -1,7 +1,7 @@
 import Level from './Level.js'
 import Platform from '../Platform.js'
 import Coin from '../Coin.js'
-import Spikes from '../spike.js'
+import Spike from '../spike.js'
 import Rectangle from '../Rectangle.js'
 import Fakespikes from '../fakespike.js'  // Ändrat till stort F
 import Box from '../Box.js'
@@ -37,27 +37,25 @@ export default class Level3 extends Level {
         // Tom - använd createBoxes istället
     }
 
+    createCoins() {
+        this.coins.push(
+            new Coin(this.game, 300, this.game.height - 1000)
+        )
+    }
     createSpikes() {
         const h = this.game.height
         this.spikes = [
-            new Spikes(this.game, 900, h - 91, 28, 10),
-            new Spikes(this.game, 750, h - 91, 28, 10),
-            new Spikes(this.game, 300, h - 91, 28, 10),
-            new Spikes(this.game, 450, h - 91, 28, 10),
-            new Spikes(this.game, 1050, h - 91, 28, 10),
-            new Spikes(this.game, 1200, h - 91, 28, 10),
-            new Spikes(this.game, 1350, h - 91, 28, 10),
-            new Spikes(this.game, 1500, h - 91, 28, 10),
-            new Spikes(this.game, 1650, h - 91, 28, 10),
+            new Spike(this.game, 900, h - 92),
+            new Spike(this.game, 750, h - 92),
+            new Spike(this.game, 300, h - 92),
+            new Spike(this.game, 450, h - 92),
+            new Spike(this.game, 1050, h - 92),
+            new Spike(this.game, 1200, h - 92),
+            new Spike(this.game, 1350, h - 92),
+            new Spike(this.game, 1500, h - 92),
+            new Spike(this.game, 1650, h - 92),
         ]
     }
-
-    createCoins() {
-        this.coins.push(
-            new Coin(this.game, 300, this.game.height - 200)
-        )
-    }
-
     createEnemies() {
         // tom just nu
     }
@@ -102,7 +100,7 @@ export default class Level3 extends Level {
             this.endZoneTeleported = true // Gör det bara en gång
             this.deathWallActive = true
             this.deathWallTimer = 400 // 1 sekunds fördröjning innan väggen börjar röra sig
-            
+
             // Skapa dödlig vägg vid slutet
             this.deathWall = new Rectangle(this.game, 2000, this.game.height - 200, 100, 300, '#FF0000')
             this.game.gameObjects.push(this.deathWall)

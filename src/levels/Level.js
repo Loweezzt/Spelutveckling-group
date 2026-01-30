@@ -56,6 +56,7 @@ export default class Level {
             rectangles: this.rectangles,
             fakespikes: this.fakespikes,
             boxes: this.boxes,
+            dartShooters: this.dartShooters,
         }
     }
 }

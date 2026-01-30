@@ -1,7 +1,7 @@
 import Level from './Level.js'
 import Platform from '../Platform.js'
 import Coin from '../Coin.js'
-import Spikes from '../spike.js'
+import Spike from '../spike.js'
 import Rectangle from '../Rectangle.js'
 import Fakespikes from '../fakespike.js'  // Ändrat till stort F
 import Box from '../Box.js'
@@ -58,7 +58,7 @@ export default class Level4 extends Level {
 
     createCoins() {
         this.coins.push(
-            new Coin(this.game, 300, this.game.height - 200)
+            new Coin(this.game, 300, this.game.height - 1000)
         )
     }
 

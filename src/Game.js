@@ -146,56 +146,57 @@ export default class Game {
         this.projectiles.push(projectile)
     }
 
-    restart() {
-        this.init()
-        this.gameState = 'PLAYING'
-        this.currentMenu = null
-    }
-
-    playerInLevelEndZone() {
-        const player = this.player
-        const zone = this.levelEndZone
-
-        if (!zone) return false
-
-        return (
-            player.x < zone.x + zone.width &&
-            player.x + player.width > zone.x &&
-            player.y < zone.y + zone.height &&
-            player.y + player.height > zone.y
-        )
-    }
-
     loadLevel(index) {
-
-        this.isLevelTransitioning = false
         this.transitionCircleRadius = Math.sqrt(this.width ** 2 + this.height ** 2)
+        this.currentMenu = null
 
         const LevelClass = this.levels[index]
         this.currentLevel = new LevelClass(this)
         this.currentLevel.init()
 
-        // HÄR definieras data!
         const data = this.currentLevel.getData()
 
-        // Hämta data från Level-klassen
         this.platforms = data.platforms || []
         this.coins = data.coins || []
         this.enemies = data.enemies || []
         this.levelEndZone = data.levelEndZone
         this.deathZones = data.deathZones || []
         this.spikes = data.spikes || []
-        this.fakespikes = data.fakespikes || []  // ← LÄGG TILL DENNA RAD
+        this.fakespikes = data.fakespikes || []
 
         this.totalCoins = this.coins.length
 
-        // Skapa spelaren med position från data
+        let maxX = this.width * 3
+        this.platforms.forEach(platform => {
+            const platformEnd = platform.x + platform.width
+            if (platformEnd > maxX) {
+                maxX = platformEnd
+            }
+        })
+        if (this.levelEndZone && this.levelEndZone.x + this.levelEndZone.width > maxX) {
+            maxX = this.levelEndZone.x + this.levelEndZone.width
+        }
+        this.worldWidth = maxX
+        this.camera.setWorldBounds(this.worldWidth, this.worldHeight)
+
         this.player = new Player(
             this,
             data.playerSpawn.x,
             data.playerSpawn.y,
             50, 50, 'green'
         )
+
+        // Sätt kameran direkt och clamppa den
+        this.camera.x = Math.max(0, Math.min(
+            data.playerSpawn.x + 25 - this.width / 2,
+            this.worldWidth - this.width
+        ))
+        this.camera.y = Math.max(0, Math.min(
+            data.playerSpawn.y + 25 - this.height / 2,
+            this.worldHeight - this.height
+        ))
+        this.camera.targetX = this.camera.x
+        this.camera.targetY = this.camera.y
 
         if (this.levelEndZone) {
             const plantSize = 64
@@ -208,25 +209,14 @@ export default class Game {
         } else {
             this.plant = null
         }
+        
         this.gameStateExtra = null
     }
-    handleDebugInput() {
-        if (this.inputHandler.keys.has('d') || this.inputHandler.keys.has('D')) {
-            if (!this.debugKeyPressed) {
-                this.debug = !this.debug
-                this.debugKeyPressed = true
-                console.log('Debug mode:', this.debug)
-            }
-        } else {
-            this.debugKeyPressed = false
-        }
-    }
 
-    // nytt
     handleMusicInput() {
         if (this.inputHandler.keys.has('m') || this.inputHandler.keys.has('M')) {
             if (!this.muteKeyPressed) {
-                this.bgMusic.muted = !this.bgMusic.muted // byt mellan tyst/ljud
+                this.bgMusic.muted = !this.bgMusic.muted
                 this.muteKeyPressed = true
                 console.log('Music Muted:', this.bgMusic.muted)
             }
@@ -237,10 +227,10 @@ export default class Game {
 
     restart() {
         this.init()
-        this.gameHasStarted = true // nytt
+        this.gameHasStarted = true
         this.gameState = 'PLAYING'
         this.currentMenu = null
-        this.bgMusic.currentTime = 0 // nytt
+        this.bgMusic.currentTime = 0
 
         this.bgMusic.play().catch(error => {
             console.warn('musik kunde inte startas:', error)
@@ -258,6 +248,7 @@ export default class Game {
             player.y + player.height > zone.y
         )
     }
+
     handleMenu(deltaTime) {
         if (this.gameState === 'MENU' && this.currentMenu) {
             this.currentMenu.update(deltaTime)
@@ -486,7 +477,7 @@ export default class Game {
         return (
             this.gameState === 'PLAYING' &&
             this.plant &&
-            !this.plant.isWatered && // bara om den inte redan växer
+            !this.plant.isWatered &&
             this.playerInLevelEndZone() &&
             this.player.isGrounded &&
             (this.inputHandler.keys.has('e') || this.inputHandler.keys.has('E'))
@@ -497,15 +488,10 @@ export default class Game {
 
 
     spawnPlant() {
-        const plantSize = 64 // frame size
-
-        this.plant = new Plant(
-            this,
-            this.levelEndZone.x + this.levelEndZone.width / 2 - (plantSize / 2),
-            this.levelEndZone.y + this.levelEndZone.height,
-            plantSize
-        )
-        this.gameStateExtra = 'WATERING'
+        if (this.plant) {
+            this.plant.water()
+            this.gameStateExtra = 'WATERING'
+        }
     }
 
     startLevelTransition() {
@@ -532,12 +518,19 @@ export default class Game {
 
         // om cirkel helt stängd, då byts level
         if (this.transitionCircleRadius <= 0) {
+            // Gå till nästa level
             this.currentLevelIndex++
             if (this.currentLevelIndex >= this.levels.length) {
                 this.gameState = 'WIN'
+                this.isLevelTransitioning = false
                 return
             }
+            
+            // Ladda ny level FÖRST
             this.loadLevel(this.currentLevelIndex)
+            
+            // SEDAN sätt isLevelTransitioning till false
+            this.isLevelTransitioning = false
         }
     }
 
@@ -546,7 +539,6 @@ export default class Game {
 
         this.plant.update(deltaTime)
 
-        // ändrat
         if (this.plant.isFullyGrown && !this.isLevelTransitioning) {
             this.startLevelTransition()
         }
@@ -561,7 +553,7 @@ export default class Game {
 
 
     handlePlanting(deltaTime) {
-        if (!this.plant && this.canPlant()) {
+        if (this.canWaterPlant()) {
             this.spawnPlant()
         }
 
@@ -571,6 +563,7 @@ export default class Game {
     }
 
     update(deltaTime) {
+        
         if (this.handleMenu(deltaTime)) return
         // if (!this.isPlaying()) return
 
@@ -589,9 +582,7 @@ export default class Game {
 
 
         // Level 3 special: Kolla om end zonen ska teleporteras och uppdatera dödlig vägg
-        // console.log('Current level index:', this.currentLevelIndex) // DEBUG
         if (this.currentLevelIndex === 2 && this.currentLevel && this.currentLevel.checkEndZoneTeleport) {
-            console.log('Calling checkEndZoneTeleport') // DEBUG
             this.currentLevel.checkEndZoneTeleport()
             // Uppdatera dödlig vägg
             if (this.currentLevel.updateDeathWall) {
@@ -607,6 +598,9 @@ export default class Game {
 
 
     draw(ctx) {
+        // Rita bakgrund
+        ctx.fillStyle = '#87CEEB'
+        ctx.fillRect(0, 0, this.width, this.height)
 
         if (this.bgMusic.muted) {
             ctx.save()
@@ -631,7 +625,7 @@ export default class Game {
 
 
         // Rita alla plattformar med camera offset
-        this.platforms.forEach(platform => {
+        this.platforms.forEach((platform, i) => {
             if (this.camera.isVisible(platform)) {
                 platform.draw(ctx, this.camera)
             }
@@ -738,11 +732,10 @@ export default class Game {
         // Rita UI sist (utan camera offset - alltid synligt)
         this.ui.draw(ctx)
 
-
-
         // Rita meny överst om den är aktiv
         if (this.currentMenu) {
             this.currentMenu.draw(ctx)
+        }
         
         if (this.isLevelTransitioning) {
             const playerScreen = this.camera.worldToScreen(
@@ -768,25 +761,4 @@ export default class Game {
             ctx.restore()
         }
     }
-
-    if (this.gameHasStarted) {
-        this.ui.draw(ctx)
-    }
-
-    if (this.currentMenu) {
-        this.currentMenu.draw(ctx)
-    }
-
-
-
-
-
-
-
-
-
-
-
-        }
-    
 }

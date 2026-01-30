@@ -1,0 +1,32 @@
+    createSpikes() {
+        const h = this.game.height
+        this.spikes = [
+            new Spike(this.game, 900, h - 91, 28, 10),
+            new Spike(this.game, 750, h - 91, 28, 10),
+            new Spike(this.game, 300, h - 91, 28, 10),
+            new Spike(this.game, 450, h - 91, 28, 10),
+            new Spike(this.game, 1050, h - 91, 28, 10),
+            new Spike(this.game, 1200, h - 91, 28, 10),
+            new Spike(this.game, 1350, h - 91, 28, 10),
+            new Spike(this.game, 1500, h - 91, 28, 10),
+            new Spike(this.game, 1650, h - 91, 28, 10),
+        ]
+    }
+
+
+
+
+    createSpikes() {
+            const h = this.game.height
+            this.spikes = [
+                new Spike(this.game, 900, h - 91),
+                new Spike(this.game, 750, h - 91),
+                new Spike(this.game, 300, h - 91),
+                new Spike(this.game, 450, h - 91),
+                new Spike(this.game, 1050, h - 91),
+                new Spike(this.game, 1200, h - 91),
+                new Spike(this.game, 1350, h - 91),
+                new Spike(this.game, 1500, h - 91),
+                new Spike(this.game, 1650, h - 91),
+            ]
+        }

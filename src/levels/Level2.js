@@ -2,7 +2,7 @@ import Level from './Level.js'
 import Platform from '../Platform.js'
 import DeathZone from '../DeathZone.js'
 import Coin from '../Coin.js'
-import Spikes from '../spike.js'
+import Spike from '../spike.js'
 import Box from '../Box.js'
 
 export default class Level2 extends Level {
@@ -57,8 +57,8 @@ export default class Level2 extends Level {
     createCoins() {
         const h = this.game.height
         this.coins.push(
-            new Coin(this.game, 320, h - 250),
-            new Coin(this.game, 600, h - 300),
+            new Coin(this.game, 320, h - 1000),
+            new Coin(this.game, 600, h - 1000),
         )
     }
 
