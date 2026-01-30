@@ -73,7 +73,7 @@ export default class Game {
         this.ui = new UserInterface(this)
 
         // debug
-        this.debug = true
+        this.debug = false
         this.debugKeyPressed = false
 
 
@@ -149,6 +149,9 @@ export default class Game {
     loadLevel(index) {
         this.transitionCircleRadius = Math.sqrt(this.width ** 2 + this.height ** 2)
         this.currentMenu = null
+
+        // Rensa gameObjects (tar bort DeathWall och andra dynamiska objekt från föregående level)
+        this.gameObjects = []
 
         const LevelClass = this.levels[index]
         this.currentLevel = new LevelClass(this)

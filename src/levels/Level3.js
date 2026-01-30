@@ -95,6 +95,13 @@ export default class Level3 extends Level {
             this.levelEndZone.x = this.playerSpawn.x
             this.levelEndZone.y = this.playerSpawn.y + 140
 
+            // Flytta också blomman till samma position som endpointen (på plattformen)
+            if (this.game.plant) {
+                const plantSize = 64
+                this.game.plant.x = this.levelEndZone.x + this.levelEndZone.width / 2 - (plantSize / 2)
+                this.game.plant.y = this.levelEndZone.y - 64 + 60  // Blomman längre ned
+            }
+
             console.log('End zone moved to:', this.levelEndZone.x, this.levelEndZone.y) // DEBUG
 
             this.endZoneTeleported = true // Gör det bara en gång
